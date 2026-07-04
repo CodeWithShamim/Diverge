@@ -1,0 +1,53 @@
+import { useEffect } from "react";
+import { HashRouter, NavLink, Route, Routes } from "react-router-dom";
+import { Board } from "./views/Board";
+import { DisputeDetail } from "./views/DisputeDetail";
+import { Assert } from "./views/Assert";
+import { Challenge } from "./views/Challenge";
+import { Appeal } from "./views/Appeal";
+import { ResolutionExplorer } from "./views/ResolutionExplorer";
+import { initLenis } from "./design/motion";
+import { CHAIN_ID, MOCK_MODE } from "./config/chain";
+
+export default function App() {
+  useEffect(() => {
+    initLenis();
+  }, []);
+
+  return (
+    <HashRouter>
+      <header className="hdr">
+        <div className="hdr-inner">
+          <NavLink to="/" className="hdr-mark">
+            FORK<span className="fork-glyph">⟋⟍</span>ARBITER
+          </NavLink>
+          <nav aria-label="Primary">
+            <NavLink to="/" end className={({ isActive }) => (isActive ? "active" : "")}>
+              Board
+            </NavLink>
+            <NavLink to="/assert" className={({ isActive }) => (isActive ? "active" : "")}>
+              Assert
+            </NavLink>
+            <NavLink to="/explorer" className={({ isActive }) => (isActive ? "active" : "")}>
+              Explorer
+            </NavLink>
+          </nav>
+          <span className="hdr-chain">
+            BRADBURY {CHAIN_ID}
+            {MOCK_MODE && <span className="mock-flag"> · SIMULATED</span>}
+          </span>
+        </div>
+      </header>
+      <main>
+        <Routes>
+          <Route path="/" element={<Board />} />
+          <Route path="/dispute/:id" element={<DisputeDetail />} />
+          <Route path="/assert" element={<Assert />} />
+          <Route path="/challenge/:id" element={<Challenge />} />
+          <Route path="/appeal/:id" element={<Appeal />} />
+          <Route path="/explorer" element={<ResolutionExplorer />} />
+        </Routes>
+      </main>
+    </HashRouter>
+  );
+}
