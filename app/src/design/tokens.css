@@ -1,0 +1,176 @@
+/* Diverge Design System — "The Divergence" §2–§4. Single source of truth.
+   No component hardcodes a color, font, duration, or radius — tokens only. */
+
+:root {
+  /* Surfaces — instrument graphite + bone */
+  --field:        #0F1216;
+  --field-raised: #171B21;
+  --field-sunken: #0A0C0F;
+  --bone:         #ECEEF1;
+
+  /* Text on field */
+  --read:         #E7EAEE;
+  --read-muted:   #9AA3AD;
+  --read-faint:   #5B6570;
+
+  /* Structure */
+  --seam:         #262C34;
+  --seam-bright:  #3A424C;
+
+  /* Signal — one interaction color */
+  --signal:       #5B8BF0;
+  --signal-ink:   #0F1216;
+
+  /* Claim sides — structurally opposed, balanced luminance */
+  --claim-a:      #E0894A;
+  --claim-a-dim:  #6B4A2C;
+  --claim-b:      #4FB0C9;
+  --claim-b-dim:  #2A5A66;
+
+  /* Verdict states */
+  --wins:         #E9EDF2;
+  --closed:       #414A54;
+  --unresolved:   #8A6D3B;
+
+  /* Tints (behind chips/rows only) */
+  --tint-a:       #221A12;
+  --tint-b:       #102227;
+  --tint-signal:  #141C2E;
+
+  /* Type */
+  --font-display: 'Space Grotesk', system-ui, sans-serif;
+  --font-claim:   'Newsreader', Georgia, serif;
+  --font-mono:    'JetBrains Mono', ui-monospace, monospace;
+
+  /* Spacing */
+  --s-1: 4px;  --s-2: 8px;  --s-3: 12px; --s-4: 16px;
+  --s-5: 24px; --s-6: 32px; --s-7: 48px; --s-8: 64px;
+
+  --radius: 3px;
+  --shadow-panel: 0 1px 3px rgba(0, 0, 0, 0.4), 0 0 0 1px var(--seam);
+
+  /* Motion */
+  --ease-instrument: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-snap: cubic-bezier(0.7, 0, 0.3, 1);
+  --dur-fast: 160ms;
+  --dur-move: 320ms;
+  --dur-diverge: 1800ms;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html { background: var(--field); }
+
+body {
+  font-family: var(--font-display);
+  font-size: 16px;
+  line-height: 26px;
+  color: var(--read);
+  background: var(--field);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Type scale (1.250, base 16) */
+.t-hero  { font: 700 49px/56px var(--font-display); letter-spacing: -1px; }
+.t-h1    { font: 700 31px/38px var(--font-display); }
+.t-h2    { font: 500 25px/32px var(--font-display); }
+.t-h3    { font: 500 20px/28px var(--font-display); }
+.t-claim { font: italic 400 19px/30px var(--font-claim); }
+.t-body  { font: 400 16px/26px var(--font-display); }
+.t-small { font: 400 14px/22px var(--font-display); color: var(--read-muted); }
+.t-label {
+  font: 500 12px/16px var(--font-display);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--read-faint);
+}
+.t-data  { font: 400 14px/22px var(--font-mono); }
+
+a { color: var(--signal); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+:focus-visible {
+  outline: 2px solid var(--signal);
+  outline-offset: 2px;
+}
+
+::selection { background: var(--tint-signal); color: var(--read); }
+
+/* Layout shell */
+.shell {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 var(--s-5) var(--s-8);
+}
+
+.panel {
+  background: var(--field-raised);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-panel);
+}
+
+.well {
+  background: var(--field-sunken);
+  border: 1px solid var(--seam);
+  border-radius: var(--radius);
+}
+
+/* Horizontal section divider that repeats the seam, label sitting on the line */
+.seam-rule {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  margin: var(--s-6) 0 var(--s-4);
+}
+.seam-rule::before,
+.seam-rule::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--seam);
+}
+
+/* Buttons — §5.7 */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  font: 500 16px/24px var(--font-display);
+  border-radius: var(--radius);
+  padding: 10px var(--s-4);
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: background var(--dur-fast) var(--ease-instrument),
+    border-color var(--dur-fast) var(--ease-instrument);
+}
+.btn-primary { background: var(--signal); color: var(--signal-ink); }
+.btn-primary:hover { background: #6E99F2; }
+.btn-primary:disabled { background: var(--seam-bright); color: var(--read-faint); cursor: not-allowed; }
+.btn-secondary {
+  background: transparent;
+  color: var(--read);
+  border-color: var(--seam-bright);
+}
+.btn-secondary:hover { border-color: var(--read-faint); }
+
+/* Forms */
+input[type="text"], textarea, select {
+  width: 100%;
+  background: var(--field-sunken);
+  border: 1px solid var(--seam);
+  border-radius: var(--radius);
+  color: var(--read);
+  font: 400 16px/26px var(--font-display);
+  padding: 10px var(--s-3);
+}
+input[type="text"]:hover, textarea:hover { border-color: var(--seam-bright); }
+textarea.claim-input { font: italic 400 19px/30px var(--font-claim); }
+input.mono-input { font: 400 14px/22px var(--font-mono); }
+label { display: block; margin-bottom: var(--s-1); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 1ms !important;
+    transition-duration: 1ms !important;
+  }
+}
