@@ -17,7 +17,7 @@ Built against the [PRD](../Diverge_PRD.md) and
 ```
 contracts/                 # GenLayer Intelligent Contracts (Python, SDK v0.3 namespace)
   dispute_registry.py      #   lifecycle: ASSERTED → CHALLENGED → … → FINAL; snapshot pinning
-  fork_arbiter.py          #   the non-deterministic core (FR-2): decomposition,
+  diverge.py          #   the non-deterministic core (FR-2): decomposition,
                            #   order normalization, custom leader/validator equivalence
   stake_vault.py           #   bonds, winner-takes-loser, 2% fee, appeal-bond settlement
   resolution_log.py        #   the product surface: get_resolution / is_final
@@ -37,7 +37,7 @@ judgment and is order-sensitive. The design answers both:
 
 1. **Decomposition** — every dispute is 1–8 boolean sub-questions declared at
    assertion time (neither party frames alone). Winner = deterministic majority
-   tally of the per-question `supports` vector (`fork_arbiter.tally_winner`).
+   tally of the per-question `supports` vector (`diverge.tally_winner`).
 2. **Order normalization (FR-2.2)** — a swap bit derived from
    `sha256(dispute_id | snapshot_a | snapshot_b)` decides which side is
    presented as neutral "Claim 1"; the mapping back to A/B happens _after_ the
@@ -114,4 +114,3 @@ Known items to verify on-network (flagged `# VERIFY:` in code):
 - Cross-contract writes are _emitted messages_ (applied at finality). The
   synchronous test harness compresses that timing; on-network flows are
   asserted by the integration tests (M3).
-# Diverge
