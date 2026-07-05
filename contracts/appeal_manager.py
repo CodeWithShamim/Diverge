@@ -1,12 +1,14 @@
+# v0.2.16
 # { "Depends": "py-genlayer:1jb45aa8ynh2a9c9xn3b7qqh8sm5q93hwfp7jqmwsfhh8jpz09h6" }
-# VERIFY: pin against `genlayer runners list` for the target GenVM before deploy.
+
 #
 # AppealManager — bonded appeals + re-adjudication (PRD FR-5).
 
 from dataclasses import dataclass
 
-import genlayer as gl
-from genlayer.types import *
+from genlayer import *
+
+ADDR_ZERO = Address(b"\x00" * 20)
 
 W_NONE, A_WINS, B_WINS, UNRESOLVED = 0, 1, 2, 3
 WINNER_ENUM = {"NONE": 0, "A_WINS": 1, "B_WINS": 2, "UNRESOLVED": 3}
@@ -15,7 +17,7 @@ APPEAL_BOND_BPS = 5_000  # FR-5.2 — 50% of the original bond
 BPS_DENOM = 10_000
 
 
-@gl.storage.allow
+@allow_storage
 @dataclass
 class Appeal:
     appellant: Address
@@ -24,7 +26,7 @@ class Appeal:
     created_at: u64
 
 
-@gl.contract.interface
+@gl.contract_interface
 class IDisputeRegistry:
     class View:
         def get_dispute(self, dispute_id: u256) -> dict: ...
@@ -33,7 +35,7 @@ class IDisputeRegistry:
         def mark_appealed(self, dispute_id: u256) -> None: ...
 
 
-@gl.contract.interface
+@gl.contract_interface
 class IStakeVault:
     class View:
         pass
@@ -42,7 +44,7 @@ class IStakeVault:
         def lock_appeal(self, dispute_id: u256, appellant: Address) -> None: ...
 
 
-@gl.contract.interface
+@gl.contract_interface
 class IDiverge:
     class View:
         pass
@@ -51,8 +53,8 @@ class IDiverge:
         def readjudicate(self, dispute_id: u256) -> None: ...
 
 
-class AppealManager(gl.contract.Contract):
-    appeals: gl.TreeMap[u256, Appeal]
+class AppealManager(gl.Contract):
+    appeals: TreeMap[u256, Appeal]
     owner: Address
     registry: Address
     vault: Address
@@ -61,9 +63,9 @@ class AppealManager(gl.contract.Contract):
 
     def __init__(self):
         self.owner = gl.message.sender_address
-        self.registry = Address.ZERO
-        self.vault = Address.ZERO
-        self.arbiter = Address.ZERO
+        self.registry = ADDR_ZERO
+        self.vault = ADDR_ZERO
+        self.arbiter = ADDR_ZERO
         self.wired = False
 
     @gl.public.write
@@ -83,7 +85,7 @@ class AppealManager(gl.contract.Contract):
         if dispute_id in self.appeals:
             raise Exception("EXPECTED: already appealed")
 
-        registry = gl.contract.get_at(self.registry)
+        registry = gl.get_contract_at(self.registry)
         d = registry.view().get_dispute(dispute_id)
 
         if d["status"] != "RESOLVED":
@@ -102,7 +104,7 @@ class AppealManager(gl.contract.Contract):
         from datetime import datetime
         try:
             now = int(datetime.fromisoformat(
-                gl.message.raw["datetime"].replace("Z", "+00:00")).timestamp())
+                gl.message_raw["datetime"].replace("Z", "+00:00")).timestamp())
         except (ValueError, AttributeError):
             now = 0
         if now >= int(d["appeal_deadline"]):
@@ -115,10 +117,10 @@ class AppealManager(gl.contract.Contract):
             created_at=now,
         )
 
-        vault = gl.contract.get_at(self.vault)
+        vault = gl.get_contract_at(self.vault)
         vault.emit(value=gl.message.value).lock_appeal(dispute_id, gl.message.sender_address)
         registry.emit().mark_appealed(dispute_id)
-        arbiter = gl.contract.get_at(self.arbiter)
+        arbiter = gl.get_contract_at(self.arbiter)
         arbiter.emit().readjudicate(dispute_id)
 
     @gl.public.view

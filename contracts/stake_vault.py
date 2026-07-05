@@ -1,13 +1,15 @@
+# v0.2.16
 # { "Depends": "py-genlayer:1jb45aa8ynh2a9c9xn3b7qqh8sm5q93hwfp7jqmwsfhh8jpz09h6" }
-# VERIFY: pin against `genlayer runners list` for the target GenVM before deploy.
+
 #
 # StakeVault — bonds, winner-takes-loser settlement, protocol fee (PRD FR-3, FR-5.4).
 # All money math is u256 integer arithmetic (FR-3.5).
 
 from dataclasses import dataclass
 
-import genlayer as gl
-from genlayer.types import *
+from genlayer import *
+
+ADDR_ZERO = Address(b"\x00" * 20)
 
 W_NONE, A_WINS, B_WINS, UNRESOLVED = 0, 1, 2, 3
 
@@ -15,7 +17,7 @@ FEE_BPS = 200          # 2% protocol fee on the transferred (loser's) bond
 BPS_DENOM = 10_000
 
 
-@gl.storage.allow
+@allow_storage
 @dataclass
 class Lock:
     asserter: Address
@@ -27,8 +29,8 @@ class Lock:
     settled: bool
 
 
-class StakeVault(gl.contract.Contract):
-    locks: gl.TreeMap[u256, Lock]
+class StakeVault(gl.Contract):
+    locks: TreeMap[u256, Lock]
     fees_accrued: u256
     owner: Address
     registry: Address
@@ -37,8 +39,8 @@ class StakeVault(gl.contract.Contract):
 
     def __init__(self):
         self.owner = gl.message.sender_address
-        self.registry = Address.ZERO
-        self.appeals = Address.ZERO
+        self.registry = ADDR_ZERO
+        self.appeals = ADDR_ZERO
         self.fees_accrued = 0
         self.wired = False
 
@@ -64,9 +66,9 @@ class StakeVault(gl.contract.Contract):
         rec = self.locks.get(dispute_id)
         if rec is None:
             rec = Lock(
-                asserter=Address.ZERO, challenger=Address.ZERO,
+                asserter=ADDR_ZERO, challenger=ADDR_ZERO,
                 bond_a=0, bond_b=0,
-                appellant=Address.ZERO, appeal_bond=0, settled=False,
+                appellant=ADDR_ZERO, appeal_bond=0, settled=False,
             )
             self.locks[dispute_id] = rec
             rec = self.locks[dispute_id]
@@ -145,9 +147,9 @@ class StakeVault(gl.contract.Contract):
                     pay_a += rec.appeal_bond
 
         if pay_a > 0:
-            gl.chain.Account(rec.asserter).emit_transfer(pay_a)
+            gl.get_contract_at(rec.asserter).emit_transfer(value=u256(pay_a))
         if pay_b > 0:
-            gl.chain.Account(rec.challenger).emit_transfer(pay_b)
+            gl.get_contract_at(rec.challenger).emit_transfer(value=u256(pay_b))
 
     @gl.public.write
     def release_uncontested(self, dispute_id: u256) -> None:
@@ -160,7 +162,7 @@ class StakeVault(gl.contract.Contract):
         if rec.bond_b != 0:
             raise Exception("EXPECTED: dispute was challenged")
         rec.settled = True
-        gl.chain.Account(rec.asserter).emit_transfer(rec.bond_a)
+        gl.get_contract_at(rec.asserter).emit_transfer(value=u256(rec.bond_a))
 
     @gl.public.write
     def withdraw_fees(self, to: Address) -> None:
@@ -170,7 +172,7 @@ class StakeVault(gl.contract.Contract):
         if amount == 0:
             raise Exception("EXPECTED: no fees accrued")
         self.fees_accrued = 0
-        gl.chain.Account(to).emit_transfer(amount)
+        gl.get_contract_at(to).emit_transfer(value=u256(amount))
 
     # -- views ----------------------------------------------------------------------
 

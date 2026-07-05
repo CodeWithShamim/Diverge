@@ -1,19 +1,21 @@
+# v0.2.16
 # { "Depends": "py-genlayer:1jb45aa8ynh2a9c9xn3b7qqh8sm5q93hwfp7jqmwsfhh8jpz09h6" }
-# VERIFY: pin against `genlayer runners list` for the target GenVM before deploy.
+
 #
 # ResolutionLog — the product surface (PRD FR-6). Finalized verdicts, queryable
 # by external contracts in one gas-cheap view call.
 
 from dataclasses import dataclass
 
-import genlayer as gl
-from genlayer.types import *
+from genlayer import *
+
+ADDR_ZERO = Address(b"\x00" * 20)
 
 W_NONE, A_WINS, B_WINS, UNRESOLVED = 0, 1, 2, 3
 WINNER_NAMES = ["NONE", "A_WINS", "B_WINS", "UNRESOLVED"]
 
 
-@gl.storage.allow
+@allow_storage
 @dataclass
 class Resolution:
     winner: u8
@@ -25,8 +27,8 @@ class Resolution:
     finalized_at: u64
 
 
-class ResolutionLog(gl.contract.Contract):
-    resolutions: gl.TreeMap[u256, Resolution]
+class ResolutionLog(gl.Contract):
+    resolutions: TreeMap[u256, Resolution]
     count: u256
     owner: Address
     registry: Address
@@ -34,7 +36,7 @@ class ResolutionLog(gl.contract.Contract):
 
     def __init__(self):
         self.owner = gl.message.sender_address
-        self.registry = Address.ZERO
+        self.registry = ADDR_ZERO
         self.count = 0
         self.wired = False
 

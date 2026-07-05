@@ -1,5 +1,6 @@
+# v0.2.16
 # { "Depends": "py-genlayer:1jb45aa8ynh2a9c9xn3b7qqh8sm5q93hwfp7jqmwsfhh8jpz09h6" }
-# VERIFY: pin against `genlayer runners list` for the target GenVM before deploy.
+
 #
 # Diverge — the non-deterministic core (PRD FR-2, FR-4, NFR-1..3).
 #
@@ -14,8 +15,9 @@ import re
 from dataclasses import dataclass
 from datetime import datetime
 
-import genlayer as gl
-from genlayer.types import *
+from genlayer import *
+
+ADDR_ZERO = Address(b"\x00" * 20)
 
 W_NONE, A_WINS, B_WINS, UNRESOLVED = 0, 1, 2, 3
 WINNER_NAMES = ["NONE", "A_WINS", "B_WINS", "UNRESOLVED"]
@@ -205,7 +207,7 @@ def now_from_iso(iso: str) -> int:
 # =============================================================================
 
 
-@gl.storage.allow
+@allow_storage
 @dataclass
 class VerdictRec:
     winner: u8
@@ -217,7 +219,7 @@ class VerdictRec:
     decided_at: u64
 
 
-@gl.storage.allow
+@allow_storage
 @dataclass
 class RetryRec:
     attempts: u8
@@ -225,7 +227,7 @@ class RetryRec:
     next_retry_at: u64
 
 
-@gl.contract.interface
+@gl.contract_interface
 class IDisputeRegistry:
     class View:
         def get_dispute(self, dispute_id: u256) -> dict: ...
@@ -234,9 +236,9 @@ class IDisputeRegistry:
         def record_verdict(self, dispute_id: u256, winner: u8, round: u8) -> None: ...
 
 
-class Diverge(gl.contract.Contract):
-    verdicts: gl.TreeMap[u256, VerdictRec]
-    retries: gl.TreeMap[u256, RetryRec]
+class Diverge(gl.Contract):
+    verdicts: TreeMap[u256, VerdictRec]
+    retries: TreeMap[u256, RetryRec]
     registry: Address
     appeals: Address
     owner: Address
@@ -244,8 +246,8 @@ class Diverge(gl.contract.Contract):
 
     def __init__(self):
         self.owner = gl.message.sender_address
-        self.registry = Address.ZERO
-        self.appeals = Address.ZERO
+        self.registry = ADDR_ZERO
+        self.appeals = ADDR_ZERO
         self.wired = False
 
     @gl.public.write
@@ -274,14 +276,14 @@ class Diverge(gl.contract.Contract):
         return self._adjudicate(dispute_id, d, round=2)
 
     def _load_dispute(self, dispute_id: u256, expected_status: tuple) -> dict:
-        registry = gl.contract.get_at(self.registry)
+        registry = gl.get_contract_at(self.registry)
         d = registry.view().get_dispute(dispute_id)
         if d["status"] not in expected_status:
             raise Exception(f"EXPECTED: dispute status is {d['status']}")
         return d
 
     def _adjudicate(self, dispute_id: u256, d: dict, round: int) -> str:
-        now = now_from_iso(gl.message.raw["datetime"])
+        now = now_from_iso(gl.message_raw["datetime"])
         rec = self.retries.get(dispute_id)
         if rec is not None and now < rec.next_retry_at:
             raise Exception("EXPECTED: retry window not yet open")
@@ -336,7 +338,7 @@ class Diverge(gl.contract.Contract):
         if dispute_id in self.retries:
             del self.retries[dispute_id]
 
-        registry = gl.contract.get_at(self.registry)
+        registry = gl.get_contract_at(self.registry)
         registry.emit().record_verdict(dispute_id, winner, round)
         return WINNER_NAMES[winner]
 
@@ -360,7 +362,7 @@ class Diverge(gl.contract.Contract):
                 round=round,
                 decided_at=now,
             )
-            registry = gl.contract.get_at(self.registry)
+            registry = gl.get_contract_at(self.registry)
             registry.emit().record_verdict(dispute_id, UNRESOLVED, round)
             return "UNRESOLVED"
 

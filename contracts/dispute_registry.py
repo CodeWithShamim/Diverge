@@ -1,5 +1,6 @@
+# v0.2.16
 # { "Depends": "py-genlayer:1jb45aa8ynh2a9c9xn3b7qqh8sm5q93hwfp7jqmwsfhh8jpz09h6" }
-# VERIFY: pin against `genlayer runners list` for the target GenVM before deploy.
+
 #
 # DisputeRegistry — dispute lifecycle for Diverge (PRD §4.1, FR-1, FR-4.1).
 # ASSERTED -> CHALLENGED -> RESOLVING -> RESOLVED / APPEALED -> FINAL
@@ -9,8 +10,9 @@ import json
 from dataclasses import dataclass
 from datetime import datetime, timezone
 
-import genlayer as gl
-from genlayer.types import *
+from genlayer import *
+
+ADDR_ZERO = Address(b"\x00" * 20)
 
 # -- status / winner enums (u8) ------------------------------------------------
 ASSERTED, CHALLENGED, RESOLVING, RESOLVED, APPEALED, FINAL = 0, 1, 2, 3, 4, 5
@@ -35,7 +37,7 @@ def pin_ref_deterministic(ref: str) -> str:
     return "sha256:" + hashlib.sha256(ref.encode("utf-8")).hexdigest()
 
 
-@gl.storage.allow
+@allow_storage
 @dataclass
 class Dispute:
     asserter: Address
@@ -54,10 +56,10 @@ class Dispute:
     challenge_deadline: u64
     appeal_deadline: u64
     created_at: u64
-    sub_questions: gl.DynArray[str]
+    sub_questions: DynArray[str]
 
 
-@gl.contract.interface
+@gl.contract_interface
 class IStakeVault:
     class View:
         pass
@@ -68,7 +70,7 @@ class IStakeVault:
         def release_uncontested(self, dispute_id: u256) -> None: ...
 
 
-@gl.contract.interface
+@gl.contract_interface
 class IResolutionLog:
     class View:
         pass
@@ -87,7 +89,7 @@ class IResolutionLog:
         ) -> None: ...
 
 
-@gl.contract.interface
+@gl.contract_interface
 class IDiverge:
     class View:
         def get_verdict(self, dispute_id: u256) -> dict: ...
@@ -96,7 +98,7 @@ class IDiverge:
         pass
 
 
-@gl.contract.interface
+@gl.contract_interface
 class IAppealManager:
     class View:
         def get_appeal(self, dispute_id: u256) -> dict: ...
@@ -105,8 +107,8 @@ class IAppealManager:
         pass
 
 
-class DisputeRegistry(gl.contract.Contract):
-    disputes: gl.TreeMap[u256, Dispute]
+class DisputeRegistry(gl.Contract):
+    disputes: TreeMap[u256, Dispute]
     dispute_count: u256
     min_bond: u256
     challenge_window_secs: u64
@@ -122,10 +124,10 @@ class DisputeRegistry(gl.contract.Contract):
         self.min_bond = min_bond
         self.challenge_window_secs = challenge_window_secs
         self.owner = gl.message.sender_address
-        self.arbiter = Address.ZERO
-        self.vault = Address.ZERO
-        self.log = Address.ZERO
-        self.appeals = Address.ZERO
+        self.arbiter = ADDR_ZERO
+        self.vault = ADDR_ZERO
+        self.log = ADDR_ZERO
+        self.appeals = ADDR_ZERO
         self.wired = False
 
     # -- wiring (deployment order breaks the address cycle) --------------------
@@ -162,11 +164,11 @@ class DisputeRegistry(gl.contract.Contract):
 
         dispute_id = self.dispute_count
         self.dispute_count = dispute_id + 1
-        now = now_from_iso(gl.message.raw["datetime"])
+        now = now_from_iso(gl.message_raw["datetime"])
 
         d = Dispute(
             asserter=gl.message.sender_address,
-            challenger=Address.ZERO,
+            challenger=ADDR_ZERO,
             claim_a=claim,
             claim_b="",
             evidence_ref_a=evidence_ref,
@@ -186,7 +188,7 @@ class DisputeRegistry(gl.contract.Contract):
         self.disputes[dispute_id] = d
 
         # escrow the bond in the vault (message emitted at finality)
-        vault = gl.contract.get_at(self.vault)
+        vault = gl.get_contract_at(self.vault)
         vault.emit(value=gl.message.value).lock(dispute_id, 0, gl.message.sender_address)
         return dispute_id
 
@@ -195,7 +197,7 @@ class DisputeRegistry(gl.contract.Contract):
     @gl.public.write.payable
     def challenge(self, dispute_id: u256, counter_claim: str, evidence_ref: str) -> None:
         d = self._get(dispute_id)
-        now = now_from_iso(gl.message.raw["datetime"])
+        now = now_from_iso(gl.message_raw["datetime"])
         if d.status != ASSERTED:
             raise Exception("EXPECTED: dispute not open for challenge")
         if now >= d.challenge_deadline:
@@ -218,7 +220,7 @@ class DisputeRegistry(gl.contract.Contract):
         d.evidence_ref_b = evidence_ref
         d.status = CHALLENGED
 
-        vault = gl.contract.get_at(self.vault)
+        vault = gl.get_contract_at(self.vault)
         vault.emit(value=gl.message.value).lock(dispute_id, 1, gl.message.sender_address)
 
     def _pin(self, ref: str) -> str:
@@ -238,7 +240,7 @@ class DisputeRegistry(gl.contract.Contract):
     @gl.public.write
     def finalize_uncontested(self, dispute_id: u256) -> None:
         d = self._get(dispute_id)
-        now = now_from_iso(gl.message.raw["datetime"])
+        now = now_from_iso(gl.message_raw["datetime"])
         if d.status != ASSERTED:
             raise Exception("EXPECTED: dispute is not an open assertion")
         if now < d.challenge_deadline:
@@ -247,9 +249,9 @@ class DisputeRegistry(gl.contract.Contract):
         d.winner = A_WINS
         d.uncontested = True
 
-        vault = gl.contract.get_at(self.vault)
+        vault = gl.get_contract_at(self.vault)
         vault.emit().release_uncontested(dispute_id)
-        log = gl.contract.get_at(self.log)
+        log = gl.get_contract_at(self.log)
         log.emit().record(dispute_id, A_WINS, False, True, "", d.snapshot_a, "", now)
 
     # -- arbiter callbacks -------------------------------------------------------
@@ -272,7 +274,7 @@ class DisputeRegistry(gl.contract.Contract):
         d = self._get(dispute_id)
         if d.status not in (CHALLENGED, RESOLVING, APPEALED):
             raise Exception("EXPECTED: dispute not resolving")
-        now = now_from_iso(gl.message.raw["datetime"])
+        now = now_from_iso(gl.message_raw["datetime"])
         d.winner = winner
         d.round = round
         d.status = RESOLVED
@@ -284,7 +286,7 @@ class DisputeRegistry(gl.contract.Contract):
         if gl.message.sender_address != self.appeals:
             raise Exception("EXPECTED: only appeal manager")
         d = self._get(dispute_id)
-        now = now_from_iso(gl.message.raw["datetime"])
+        now = now_from_iso(gl.message_raw["datetime"])
         if d.status != RESOLVED or d.round >= 2:
             raise Exception("EXPECTED: dispute not appealable")
         if now >= d.appeal_deadline:
@@ -296,29 +298,29 @@ class DisputeRegistry(gl.contract.Contract):
     @gl.public.write
     def finalize(self, dispute_id: u256) -> None:
         d = self._get(dispute_id)
-        now = now_from_iso(gl.message.raw["datetime"])
+        now = now_from_iso(gl.message_raw["datetime"])
         if d.status != RESOLVED:
             raise Exception("EXPECTED: no verdict to finalize")
         if d.round < 2 and now < d.appeal_deadline:
             raise Exception("EXPECTED: appeal window still open")
 
-        arbiter = gl.contract.get_at(self.arbiter)
+        arbiter = gl.get_contract_at(self.arbiter)
         verdict = arbiter.view().get_verdict(dispute_id)
 
-        appellant = Address.ZERO
+        appellant = ADDR_ZERO
         flipped = False
         if d.round >= 2:
-            appeals = gl.contract.get_at(self.appeals)
+            appeals = gl.get_contract_at(self.appeals)
             appeal = appeals.view().get_appeal(dispute_id)
             appellant = Address(appeal["appellant"])
             flipped = bool(appeal["pre_appeal_winner"] != d.winner)
 
         d.status = FINAL
 
-        vault = gl.contract.get_at(self.vault)
+        vault = gl.get_contract_at(self.vault)
         vault.emit().settle(dispute_id, d.winner, appellant, flipped)
 
-        log = gl.contract.get_at(self.log)
+        log = gl.get_contract_at(self.log)
         log.emit().record(
             dispute_id,
             d.winner,

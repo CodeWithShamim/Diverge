@@ -1,5 +1,6 @@
+# v0.2.16
 # { "Depends": "py-genlayer:1jb45aa8ynh2a9c9xn3b7qqh8sm5q93hwfp7jqmwsfhh8jpz09h6" }
-# VERIFY: pin against `genlayer runners list` for the target GenVM before deploy.
+
 #
 # MockOptimisticOracle — M6 consumer example (PRD §8).
 # A minimal optimistic oracle that outsources its dispute game to Diverge:
@@ -8,15 +9,14 @@
 
 from dataclasses import dataclass
 
-import genlayer as gl
-from genlayer.types import *
+from genlayer import *
 
 # request status
 OPEN, DISPUTED, SETTLED_TRUE, SETTLED_FALSE, VOID = 0, 1, 2, 3, 4
 STATUS_NAMES = ["OPEN", "DISPUTED", "SETTLED_TRUE", "SETTLED_FALSE", "VOID"]
 
 
-@gl.storage.allow
+@allow_storage
 @dataclass
 class Request:
     requester: Address
@@ -26,7 +26,7 @@ class Request:
     status: u8
 
 
-@gl.contract.interface
+@gl.contract_interface
 class IResolutionLog:
     class View:
         def get_resolution(self, dispute_id: u256) -> dict: ...
@@ -36,8 +36,8 @@ class IResolutionLog:
         pass
 
 
-class MockOptimisticOracle(gl.contract.Contract):
-    requests: gl.TreeMap[u256, Request]
+class MockOptimisticOracle(gl.Contract):
+    requests: TreeMap[u256, Request]
     request_count: u256
     resolution_log: Address
 
@@ -79,7 +79,7 @@ class MockOptimisticOracle(gl.contract.Contract):
         if r.status != DISPUTED:
             raise Exception("EXPECTED: request not disputed")
 
-        log = gl.contract.get_at(self.resolution_log)
+        log = gl.get_contract_at(self.resolution_log)
         if not log.view().is_final(r.fork_dispute_id):
             raise Exception("EXPECTED: fork dispute not final yet")
         res = log.view().get_resolution(r.fork_dispute_id)
