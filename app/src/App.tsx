@@ -14,6 +14,7 @@ import { WalletControl } from "./components/WalletButton";
 import { ThemeToggle } from "./components/ThemeToggle";
 import { Footer } from "./components/Footer";
 import { Toaster } from "./components/Toaster";
+import { RouteTransition } from "./components/RouteTransition";
 
 export default function App() {
   useEffect(() => {
@@ -64,6 +65,7 @@ export default function App() {
       </main>
       <Footer />
       </div>
+      <RouteTransition />
       <Toaster />
     </HashRouter>
   );
