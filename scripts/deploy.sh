@@ -7,6 +7,11 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
+# Export PRIVATE_KEY (and other vars) from .env for the genlayer CLI — matches
+# the documented prereq above. The CLI otherwise signs with the active keystore
+# account (see `genlayer account`); .env just makes the deployer explicit.
+[ -f .env ] && { set -a; . ./.env; set +a; }
+
 NETWORK="${1:-studionet}"   # StudioNet only
 MIN_BOND="${MIN_BOND:-1000000000000000000}"        # 1 GEN in wei
 CHALLENGE_WINDOW="${CHALLENGE_WINDOW:-259200}"     # 72h in seconds
@@ -26,17 +31,25 @@ echo "== deploying AppealManager"
 APL=$(genlayer deploy --contract contracts/appeal_manager.py | tee /dev/stderr | grep -oE '0x[0-9a-fA-F]{40}' | tail -1)
 
 echo "== wiring"
-genlayer call "$REG" wire --args "$ARB" "$VLT" "$LOG" "$APL"
-genlayer call "$ARB" wire --args "$REG" "$APL"
-genlayer call "$VLT" wire --args "$REG" "$APL"
-genlayer call "$LOG" wire --args "$REG"
-genlayer call "$APL" wire --args "$REG" "$VLT" "$ARB"
+# wire() is @gl.public.write — it MUST be sent as a state-changing transaction.
+# `genlayer call` only simulates (no state change), so wiring would never persist.
+genlayer write "$REG" wire --args "$ARB" "$VLT" "$LOG" "$APL"
+genlayer write "$ARB" wire --args "$REG" "$APL"
+genlayer write "$VLT" wire --args "$REG" "$APL"
+genlayer write "$LOG" wire --args "$REG"
+genlayer write "$APL" wire --args "$REG" "$VLT" "$ARB"
 
 echo "== generating schemas (never hand-typed ABIs)"
+# `genlayer schema` pretty-prints a JS object (single quotes, bare keys), which
+# is not valid JSON — fetch the schema over RPC instead.
+RPC_URL="https://studio.genlayer.com/api"
 mkdir -p app/src/config/schemas
 for pair in "registry:$REG" "arbiter:$ARB" "vault:$VLT" "log:$LOG" "appeals:$APL"; do
   name="${pair%%:*}"; addr="${pair##*:}"
-  genlayer schema "$addr" > "app/src/config/schemas/$name.json"
+  curl -s -X POST "$RPC_URL" -H 'Content-Type: application/json' \
+    -d "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"gen_getContractSchema\",\"params\":[\"$addr\"]}" \
+    | python3 -c 'import sys, json; json.dump(json.load(sys.stdin)["result"], sys.stdout, indent=2); print()' \
+    > "app/src/config/schemas/$name.json"
 done
 
 cat <<EOF
