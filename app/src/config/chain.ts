@@ -27,4 +27,5 @@ export const MOCK_MODE =
 export const PRIVY_APP_ID = import.meta.env.VITE_PRIVY_APP_ID ?? "";
 
 export const TOKEN = "GEN";
-export const MIN_BOND_GEN = 5.0;
+// Must match the deployed DisputeRegistry's min_bond (1 GEN — scripts/deploy.sh MIN_BOND).
+export const MIN_BOND_GEN = 1.0;

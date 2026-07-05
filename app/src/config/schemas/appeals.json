@@ -1,0 +1,51 @@
+{
+  "ctor": {
+    "params": [],
+    "kwparams": {}
+  },
+  "methods": {
+    "appeal": {
+      "params": [
+        [
+          "dispute_id",
+          "int"
+        ]
+      ],
+      "kwparams": {},
+      "readonly": false,
+      "ret": "null",
+      "payable": true
+    },
+    "get_appeal": {
+      "params": [
+        [
+          "dispute_id",
+          "int"
+        ]
+      ],
+      "kwparams": {},
+      "readonly": true,
+      "ret": "dict"
+    },
+    "wire": {
+      "params": [
+        [
+          "registry",
+          "address"
+        ],
+        [
+          "vault",
+          "address"
+        ],
+        [
+          "arbiter",
+          "address"
+        ]
+      ],
+      "kwparams": {},
+      "readonly": false,
+      "ret": "null",
+      "payable": false
+    }
+  }
+}

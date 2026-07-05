@@ -1,0 +1,185 @@
+{
+  "ctor": {
+    "params": [
+      [
+        "min_bond",
+        "int"
+      ],
+      [
+        "challenge_window_secs",
+        "int"
+      ]
+    ],
+    "kwparams": {}
+  },
+  "methods": {
+    "assert_claim": {
+      "params": [
+        [
+          "claim",
+          "string"
+        ],
+        [
+          "evidence_ref",
+          "string"
+        ],
+        [
+          "sub_questions",
+          [
+            {
+              "$rep": "string"
+            }
+          ]
+        ]
+      ],
+      "kwparams": {},
+      "readonly": false,
+      "ret": "int",
+      "payable": true
+    },
+    "challenge": {
+      "params": [
+        [
+          "dispute_id",
+          "int"
+        ],
+        [
+          "counter_claim",
+          "string"
+        ],
+        [
+          "evidence_ref",
+          "string"
+        ]
+      ],
+      "kwparams": {},
+      "readonly": false,
+      "ret": "null",
+      "payable": true
+    },
+    "finalize": {
+      "params": [
+        [
+          "dispute_id",
+          "int"
+        ]
+      ],
+      "kwparams": {},
+      "readonly": false,
+      "ret": "null",
+      "payable": false
+    },
+    "finalize_uncontested": {
+      "params": [
+        [
+          "dispute_id",
+          "int"
+        ]
+      ],
+      "kwparams": {},
+      "readonly": false,
+      "ret": "null",
+      "payable": false
+    },
+    "get_board": {
+      "params": [
+        [
+          "offset",
+          "int"
+        ],
+        [
+          "limit",
+          "int"
+        ]
+      ],
+      "kwparams": {},
+      "readonly": true,
+      "ret": "array"
+    },
+    "get_dispute": {
+      "params": [
+        [
+          "dispute_id",
+          "int"
+        ]
+      ],
+      "kwparams": {},
+      "readonly": true,
+      "ret": "dict"
+    },
+    "get_dispute_count": {
+      "params": [],
+      "kwparams": {},
+      "readonly": true,
+      "ret": "int"
+    },
+    "mark_appealed": {
+      "params": [
+        [
+          "dispute_id",
+          "int"
+        ]
+      ],
+      "kwparams": {},
+      "readonly": false,
+      "ret": "null",
+      "payable": false
+    },
+    "mark_resolving": {
+      "params": [
+        [
+          "dispute_id",
+          "int"
+        ]
+      ],
+      "kwparams": {},
+      "readonly": false,
+      "ret": "null",
+      "payable": false
+    },
+    "record_verdict": {
+      "params": [
+        [
+          "dispute_id",
+          "int"
+        ],
+        [
+          "winner",
+          "int"
+        ],
+        [
+          "round",
+          "int"
+        ]
+      ],
+      "kwparams": {},
+      "readonly": false,
+      "ret": "null",
+      "payable": false
+    },
+    "wire": {
+      "params": [
+        [
+          "arbiter",
+          "address"
+        ],
+        [
+          "vault",
+          "address"
+        ],
+        [
+          "log",
+          "address"
+        ],
+        [
+          "appeals",
+          "address"
+        ]
+      ],
+      "kwparams": {},
+      "readonly": false,
+      "ret": "null",
+      "payable": false
+    }
+  }
+}

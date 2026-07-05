@@ -1,0 +1,88 @@
+{
+  "ctor": {
+    "params": [],
+    "kwparams": {}
+  },
+  "methods": {
+    "get_count": {
+      "params": [],
+      "kwparams": {},
+      "readonly": true,
+      "ret": "int"
+    },
+    "get_resolution": {
+      "params": [
+        [
+          "dispute_id",
+          "int"
+        ]
+      ],
+      "kwparams": {},
+      "readonly": true,
+      "ret": "dict"
+    },
+    "is_final": {
+      "params": [
+        [
+          "dispute_id",
+          "int"
+        ]
+      ],
+      "kwparams": {},
+      "readonly": true,
+      "ret": "bool"
+    },
+    "record": {
+      "params": [
+        [
+          "dispute_id",
+          "int"
+        ],
+        [
+          "winner",
+          "int"
+        ],
+        [
+          "unresolved",
+          "bool"
+        ],
+        [
+          "uncontested",
+          "bool"
+        ],
+        [
+          "supports_vector",
+          "string"
+        ],
+        [
+          "snapshot_a",
+          "string"
+        ],
+        [
+          "snapshot_b",
+          "string"
+        ],
+        [
+          "finalized_at",
+          "int"
+        ]
+      ],
+      "kwparams": {},
+      "readonly": false,
+      "ret": "null",
+      "payable": false
+    },
+    "wire": {
+      "params": [
+        [
+          "registry",
+          "address"
+        ]
+      ],
+      "kwparams": {},
+      "readonly": false,
+      "ret": "null",
+      "payable": false
+    }
+  }
+}

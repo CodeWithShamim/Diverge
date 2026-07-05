@@ -1,0 +1,125 @@
+{
+  "ctor": {
+    "params": [],
+    "kwparams": {}
+  },
+  "methods": {
+    "get_fees_accrued": {
+      "params": [],
+      "kwparams": {},
+      "readonly": true,
+      "ret": "int"
+    },
+    "get_lock": {
+      "params": [
+        [
+          "dispute_id",
+          "int"
+        ]
+      ],
+      "kwparams": {},
+      "readonly": true,
+      "ret": "dict"
+    },
+    "lock": {
+      "params": [
+        [
+          "dispute_id",
+          "int"
+        ],
+        [
+          "side",
+          "int"
+        ],
+        [
+          "party",
+          "address"
+        ]
+      ],
+      "kwparams": {},
+      "readonly": false,
+      "ret": "null",
+      "payable": true
+    },
+    "lock_appeal": {
+      "params": [
+        [
+          "dispute_id",
+          "int"
+        ],
+        [
+          "appellant",
+          "address"
+        ]
+      ],
+      "kwparams": {},
+      "readonly": false,
+      "ret": "null",
+      "payable": true
+    },
+    "release_uncontested": {
+      "params": [
+        [
+          "dispute_id",
+          "int"
+        ]
+      ],
+      "kwparams": {},
+      "readonly": false,
+      "ret": "null",
+      "payable": false
+    },
+    "settle": {
+      "params": [
+        [
+          "dispute_id",
+          "int"
+        ],
+        [
+          "winner",
+          "int"
+        ],
+        [
+          "appellant",
+          "address"
+        ],
+        [
+          "flipped",
+          "bool"
+        ]
+      ],
+      "kwparams": {},
+      "readonly": false,
+      "ret": "null",
+      "payable": false
+    },
+    "wire": {
+      "params": [
+        [
+          "registry",
+          "address"
+        ],
+        [
+          "appeals",
+          "address"
+        ]
+      ],
+      "kwparams": {},
+      "readonly": false,
+      "ret": "null",
+      "payable": false
+    },
+    "withdraw_fees": {
+      "params": [
+        [
+          "to",
+          "address"
+        ]
+      ],
+      "kwparams": {},
+      "readonly": false,
+      "ret": "null",
+      "payable": false
+    }
+  }
+}
