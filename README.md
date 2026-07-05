@@ -75,20 +75,30 @@ ledger) with the LLM/web monkeypatched per test.
 cd app && npm install && npm run dev
 ```
 
-With no addresses configured the app runs on a built-in **mock adapter**
-(header shows `SIMULATED`) — the full UX is explorable: board, bilateral
-dispute detail, assert/challenge/appeal flows with the complete tx state
-ladder (submitted → pending → accepted → finalized / soft-error), the
-sub-question resolution ceremony, and the Divergence verdict scene (R3F, with
-a static-SVG reduced-motion fallback that is also the downloadable artifact).
+Diverge targets **GenLayer StudioNet** (chain `61999`, `https://studio.genlayer.com/api`)
+— the hosted, gasless studio network — and nothing else.
 
-## Deploy (M3–M4)
+**Wallet connect (Privy).** Set `VITE_PRIVY_APP_ID` (from
+[dashboard.privy.io](https://dashboard.privy.io)) in `app/.env.local` to enable
+the header's *Connect wallet* button — social login + embedded wallet, or an
+external EVM wallet. The connected wallet's EIP-1193 provider is bridged into
+`genlayer-js` as the transaction signer; every write is signed by it. Without
+an app id the button shows a hint and the rest of the app still runs.
+
+With no contract addresses configured the app runs on a built-in **mock adapter**
+(header shows `SIMULATED`) — the full UX is explorable without a deploy: board,
+bilateral dispute detail, assert/challenge/appeal flows with the complete tx
+state ladder (submitted → pending → accepted → finalized / soft-error), the
+sub-question resolution ceremony, and the Divergence verdict scene (R3F, with a
+static-SVG reduced-motion fallback that is also the downloadable artifact).
+
+## Deploy (StudioNet)
 
 ```bash
 cp .env.example .env                 # add PRIVATE_KEY (never committed)
-./scripts/deploy.sh studionet        # consensus proof, gasless
-./scripts/deploy.sh bradbury         # fund via browser faucet first
-# then copy the printed VITE_ADDR_* into app/.env.local and set VITE_MOCK=0
+./scripts/deploy.sh studionet        # gasless — no faucet step
+# then copy the printed VITE_ADDR_* into app/.env.local, set VITE_MOCK=0,
+# and set VITE_PRIVY_APP_ID so writes can be wallet-signed
 ```
 
 Debug loop: `genlayer receipt <txHash> --stdout --stderr` before touching code.
@@ -100,8 +110,8 @@ Debug loop: `genlayer receipt <txHash> --stdout --stderr` before touching code.
 | M1  | Core contracts                              | ✅ written, direct tests green                     |
 | M2  | Arbiter (order-swap + injection + taxonomy) | ✅ written + tested (mocked)                       |
 | M3  | Consensus proof (gltest on StudioNet)       | ⏳ requires `gltest` + network                     |
-| M4  | Bradbury deploy                             | ⏳ `scripts/deploy.sh bradbury` (faucet is manual) |
-| M5  | dApp per FR-7 + Design System               | ✅ built; runs on mock adapter until M4            |
+| M4  | StudioNet deploy                            | ⏳ `scripts/deploy.sh studionet` (gasless)         |
+| M5  | dApp per FR-7 + Design System + Privy wallet | ✅ built; runs on mock adapter until M4            |
 | M6  | Consumer example                            | ✅ `mock_optimistic_oracle.py` + tests             |
 | M7  | Submission                                  | ⏳ portal + demo video                             |
 
@@ -109,8 +119,12 @@ Known items to verify on-network (flagged `# VERIFY:` in code):
 
 - The pinned `py-genlayer` runner hash in each contract's `Depends` header —
   check `genlayer runners list` for the target GenVM.
-- `genlayer-js` chain export / receipt shape for Bradbury in `app/src/lib/client.ts`
-  and `writes.ts`; regenerate schemas with `genlayer schema` after deploy.
+- `genlayer-js` StudioNet receipt shape in `app/src/lib/writes.ts`, and whether
+  the first wallet-signed write needs `client.connect()`; regenerate schemas
+  with `genlayer schema` after deploy.
+- Privy → `genlayer-js` signer bridge (`app/src/lib/client.ts`): the wallet's
+  EIP-1193 provider is passed to `createClient({ provider })`. Confirm StudioNet
+  transaction signing succeeds end-to-end with a real connected wallet.
 - Cross-contract writes are _emitted messages_ (applied at finality). The
   synchronous test harness compresses that timing; on-network flows are
   asserted by the integration tests (M3).

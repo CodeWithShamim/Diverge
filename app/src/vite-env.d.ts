@@ -8,6 +8,7 @@ interface ImportMetaEnv {
   readonly VITE_ADDR_VAULT?: string;
   readonly VITE_ADDR_LOG?: string;
   readonly VITE_ADDR_APPEALS?: string;
+  readonly VITE_PRIVY_APP_ID?: string;
 }
 
 interface ImportMeta {

@@ -7,7 +7,8 @@ import { Challenge } from "./views/Challenge";
 import { Appeal } from "./views/Appeal";
 import { ResolutionExplorer } from "./views/ResolutionExplorer";
 import { initLenis } from "./design/motion";
-import { CHAIN_ID, MOCK_MODE } from "./config/chain";
+import { CHAIN_ID, CHAIN_NAME, MOCK_MODE } from "./config/chain";
+import { WalletControl } from "./components/WalletButton";
 
 export default function App() {
   useEffect(() => {
@@ -19,7 +20,7 @@ export default function App() {
       <header className="hdr">
         <div className="hdr-inner">
           <NavLink to="/" className="hdr-mark">
-            FORK<span className="fork-glyph">⟋⟍</span>ARBITER
+            DIVERGE<span className="fork-glyph">⟋⟍</span>
           </NavLink>
           <nav aria-label="Primary">
             <NavLink to="/" end className={({ isActive }) => (isActive ? "active" : "")}>
@@ -32,8 +33,9 @@ export default function App() {
               Explorer
             </NavLink>
           </nav>
+          <WalletControl />
           <span className="hdr-chain">
-            BRADBURY {CHAIN_ID}
+            {CHAIN_NAME} {CHAIN_ID}
             {MOCK_MODE && <span className="mock-flag"> · SIMULATED</span>}
           </span>
         </div>

@@ -1,10 +1,15 @@
-/** Typed chain config — GenLayer Bradbury Testnet (PRD FR-7.5).
+/** Typed chain config — GenLayer Studio Network (StudioNet) only.
+ *  StudioNet is GenLayer's hosted, gasless studio network (chain 61999).
  *  Contract addresses come from env; with none set the app runs on the
  *  built-in mock adapter so the full UX is explorable without a deploy. */
 
-export const CHAIN_ID = 4221;
+import { studionet } from "genlayer-js/chains";
+
+export const CHAIN = studionet;
+export const CHAIN_ID = studionet.id; // 61999
+export const CHAIN_NAME = "STUDIONET";
 export const RPC_URL =
-  import.meta.env.VITE_RPC_URL ?? "https://rpc-bradbury.genlayer.com";
+  import.meta.env.VITE_RPC_URL ?? studionet.rpcUrls.default.http[0];
 
 export const ADDRESSES = {
   registry: import.meta.env.VITE_ADDR_REGISTRY ?? "",
@@ -17,6 +22,9 @@ export const ADDRESSES = {
 /** Mock mode: explicit VITE_MOCK=1, or no registry address configured. */
 export const MOCK_MODE =
   import.meta.env.VITE_MOCK === "1" || ADDRESSES.registry === "";
+
+/** Privy app id — from the Privy dashboard. Wallet connect is inert without it. */
+export const PRIVY_APP_ID = import.meta.env.VITE_PRIVY_APP_ID ?? "";
 
 export const TOKEN = "GEN";
 export const MIN_BOND_GEN = 5.0;

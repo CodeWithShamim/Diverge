@@ -10,7 +10,8 @@ import {
   mockResolve,
 } from "./mock";
 import type { TxProgress } from "./types";
-import { getClient } from "./client";
+import { getWriteClient } from "./client";
+import { getActiveAddress, getActiveProvider } from "./wallet";
 
 type OnProgress = (p: TxProgress) => void;
 
@@ -21,10 +22,22 @@ async function realWrite(
   value: bigint,
   onProgress: OnProgress
 ) {
+  const provider = getActiveProvider();
+  const account = getActiveAddress();
+  if (!provider || !account) {
+    onProgress({ state: "failed", detail: "Connect a wallet to sign this transaction." });
+    return;
+  }
   try {
-    const client = await getClient();
+    const client = await getWriteClient(provider);
     onProgress({ state: "submitted" });
-    const hash = await client.writeContract({ address, functionName, args, value });
+    const hash = await client.writeContract({
+      address,
+      functionName,
+      args,
+      value,
+      account,
+    });
     onProgress({ state: "pending", hash });
     const receipt = await client.waitForTransactionReceipt({
       hash,

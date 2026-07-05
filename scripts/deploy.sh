@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
-# Deploy the Diverge contract set to GenLayer (M4).
+# Deploy the Diverge contract set to GenLayer StudioNet (gasless studio network).
 # Wiring order breaks the address cycle: deploy all five, then wire().
 #
-# Prereqs: `npm i -g genlayer`, funded account (browser faucet for Bradbury),
-# PRIVATE_KEY in .env (never committed — NFR-6).
+# Prereqs: `npm i -g genlayer`, PRIVATE_KEY in .env (never committed — NFR-6).
+# StudioNet is gasless, so no faucet step is needed.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-NETWORK="${1:-studionet}"   # studionet | bradbury
+NETWORK="${1:-studionet}"   # StudioNet only
 MIN_BOND="${MIN_BOND:-1000000000000000000}"        # 1 GEN in wei
 CHALLENGE_WINDOW="${CHALLENGE_WINDOW:-259200}"     # 72h in seconds
 

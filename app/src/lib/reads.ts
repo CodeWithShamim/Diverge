@@ -3,11 +3,11 @@
 import { ADDRESSES, MOCK_MODE } from "../config/chain";
 import { mockGetBoard, mockGetDispute, mockGetResolution } from "./mock";
 import type { Dispute, Resolution } from "./types";
-import { getClient } from "./client";
+import { getReadClient } from "./client";
 
 export async function getBoard(): Promise<Dispute[]> {
   if (MOCK_MODE) return mockGetBoard();
-  const client = await getClient();
+  const client = await getReadClient();
   const raw = await client.readContract({
     address: ADDRESSES.registry,
     functionName: "get_board",
@@ -18,7 +18,7 @@ export async function getBoard(): Promise<Dispute[]> {
 
 export async function getDispute(id: number): Promise<Dispute | undefined> {
   if (MOCK_MODE) return mockGetDispute(id);
-  const client = await getClient();
+  const client = await getReadClient();
   const raw = await client.readContract({
     address: ADDRESSES.registry,
     functionName: "get_dispute",
@@ -29,7 +29,7 @@ export async function getDispute(id: number): Promise<Dispute | undefined> {
 
 export async function getResolution(id: number): Promise<Resolution | undefined> {
   if (MOCK_MODE) return mockGetResolution(id);
-  const client = await getClient();
+  const client = await getReadClient();
   try {
     const raw = await client.readContract({
       address: ADDRESSES.log,
