@@ -2,7 +2,14 @@
  *  dApp is fully explorable before (or without) a Bradbury deployment.
  *  Same interface as lib/reads.ts + lib/writes.ts real paths. */
 
-import type { Dispute, Resolution, SubResult, TxProgress, Winner } from "./types";
+import type {
+  Dispute,
+  Resolution,
+  SubResult,
+  TxProgress,
+  VerdictHydration,
+  Winner,
+} from "./types";
 
 const now = () => Math.floor(Date.now() / 1000);
 const H = 3600;
@@ -218,6 +225,16 @@ export async function mockGetDispute(id: number): Promise<Dispute | undefined> {
 export async function mockGetResolution(id: number): Promise<Resolution | undefined> {
   await wait(160);
   return resolutions.get(id);
+}
+
+/** Mirror of the real arbiter.get_verdict read — the mock store already holds
+ *  hydrated sub-results, so surface them through the same shape the real path
+ *  returns so DisputeDetail hydration is one code path in both modes. */
+export async function mockGetVerdict(id: number): Promise<VerdictHydration | undefined> {
+  await wait(140);
+  const d = disputes.find((x) => x.id === id);
+  if (!d || d.winner === "NONE" || d.subResults === null) return undefined;
+  return { subResults: d.subResults, confidence: d.confidence, round: d.round };
 }
 
 // ---- writes — every write walks the full FR-7.2 ladder --------------------------

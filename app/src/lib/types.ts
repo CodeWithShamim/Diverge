@@ -41,6 +41,14 @@ export interface Dispute {
   createdAt: number;
 }
 
+/** What arbiter.get_verdict yields, mapped into the sub-result shape the detail
+ *  view renders. Hydrated onto a Dispute after adjudication (both mock + real). */
+export interface VerdictHydration {
+  subResults: SubResult[];
+  confidence: Dispute["confidence"];
+  round: number;
+}
+
 export interface Resolution {
   disputeId: number;
   winner: Winner;
