@@ -2,30 +2,119 @@
  *  A single bright node splits into two energy paths (amber / teal) held in
  *  perfect mirror; validator motes drift undecided between them; a star field
  *  and instrument grid give the scene depth. All motion is ambient — the fork
- *  never resolves here. Resolution belongs to the product, not the poster. */
+ *  never resolves here. Resolution belongs to the product, not the poster.
+ *
+ *  The scene re-skins with the app theme: on dark it glows (additive blending,
+ *  pale core); on light it inks (normal blending, darker saturated hues) so the
+ *  instrument stays legible on paper. Palette flows down via context, and the
+ *  instrument remounts on theme change so every material picks up the new
+ *  blending mode cleanly. */
 
-import { useMemo, useRef } from "react";
-import { Canvas, useFrame } from "@react-three/fiber";
-import * as THREE from "three";
-import { prefersReducedMotion } from "../../design/motion";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
+import { Canvas, useFrame } from '@react-three/fiber';
+import * as THREE from 'three';
+import { prefersReducedMotion } from '../../design/motion';
 
-const COLOR = {
-  a: new THREE.Color("#E0894A"),
-  b: new THREE.Color("#4FB0C9"),
-  wins: new THREE.Color("#E9EDF2"),
-  signal: new THREE.Color("#5B8BF0"),
-  faint: new THREE.Color("#5B6570"),
+type ThemeName = 'dark' | 'light';
+
+/* Per-theme scene definition. Dark relies on additive glow over darkness;
+   light uses normal blending with denser hues + a soft node so nothing turns
+   into an invisible bright smear on a pale field. */
+const SCENE = {
+  dark: {
+    a: '#E0894A',
+    b: '#4FB0C9',
+    wins: '#E9EDF2',
+    signal: '#5B8BF0',
+    faint: '#5B6570',
+    blending: THREE.AdditiveBlending,
+    fog: '#0E1116',
+    gridA: '#5A6675',
+    gridB: '#2E3843',
+    starOpacity: 0.75,
+    nodeGlow: 1,
+  },
+  light: {
+    a: '#B25E22',
+    b: '#196F82',
+    wins: '#1C2634',
+    signal: '#2F6FE0',
+    faint: '#9AA3AD',
+    blending: THREE.NormalBlending,
+    fog: '#F5F6F8',
+    gridA: '#BEC6CE',
+    gridB: '#DBDFE5',
+    starOpacity: 0.9,
+    nodeGlow: 0.4,
+  },
+} as const;
+
+type Palette = {
+  a: THREE.Color;
+  b: THREE.Color;
+  wins: THREE.Color;
+  signal: THREE.Color;
+  faint: THREE.Color;
+  blending: THREE.Blending;
+  fog: string;
+  gridA: string;
+  gridB: string;
+  starOpacity: number;
+  nodeGlow: number;
 };
 
-/* Soft radial glow texture, built once. */
+function makePalette(name: ThemeName): Palette {
+  const s = SCENE[name];
+  return {
+    a: new THREE.Color(s.a),
+    b: new THREE.Color(s.b),
+    wins: new THREE.Color(s.wins),
+    signal: new THREE.Color(s.signal),
+    faint: new THREE.Color(s.faint),
+    blending: s.blending,
+    fog: s.fog,
+    gridA: s.gridA,
+    gridB: s.gridB,
+    starOpacity: s.starOpacity,
+    nodeGlow: s.nodeGlow,
+  };
+}
+
+const PaletteCtx = createContext<Palette>(makePalette('dark'));
+const usePalette = () => useContext(PaletteCtx);
+
+/** Tracks <html data-theme> so the scene follows the theme toggle live. */
+function useThemeName(): ThemeName {
+  const read = (): ThemeName =>
+    document.documentElement.getAttribute('data-theme') === 'light'
+      ? 'light'
+      : 'dark';
+  const [name, setName] = useState<ThemeName>(read);
+  useEffect(() => {
+    const el = document.documentElement;
+    const obs = new MutationObserver(() => setName(read()));
+    obs.observe(el, { attributes: true, attributeFilter: ['data-theme'] });
+    return () => obs.disconnect();
+  }, []);
+  return name;
+}
+
+/* Soft radial glow texture, built once. White mask — the material tints it. */
 function makeGlowTexture(): THREE.Texture {
-  const c = document.createElement("canvas");
+  const c = document.createElement('canvas');
   c.width = c.height = 128;
-  const ctx = c.getContext("2d")!;
+  const ctx = c.getContext('2d')!;
   const g = ctx.createRadialGradient(64, 64, 0, 64, 64, 64);
-  g.addColorStop(0, "rgba(255,255,255,1)");
-  g.addColorStop(0.3, "rgba(255,255,255,0.45)");
-  g.addColorStop(1, "rgba(255,255,255,0)");
+  g.addColorStop(0, 'rgba(255,255,255,1)');
+  g.addColorStop(0.3, 'rgba(255,255,255,0.45)');
+  g.addColorStop(1, 'rgba(255,255,255,0)');
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, 128, 128);
   const tex = new THREE.CanvasTexture(c);
@@ -48,9 +137,10 @@ const stemCurve = new THREE.LineCurve3(
 );
 
 /** One glowing path: bright core tube + wide halo tube, gently breathing. */
-function ForkPath({ side, glow }: { side: "A" | "B"; glow: THREE.Texture }) {
-  const dir = side === "A" ? -1 : 1;
-  const color = side === "A" ? COLOR.a : COLOR.b;
+function ForkPath({ side, glow }: { side: 'A' | 'B'; glow: THREE.Texture }) {
+  const P = usePalette();
+  const dir = side === 'A' ? -1 : 1;
+  const color = side === 'A' ? P.a : P.b;
   const curve = useMemo(() => forkCurve(dir as 1 | -1), [dir]);
   const coreMat = useRef<THREE.MeshBasicMaterial>(null!);
   const haloMat = useRef<THREE.MeshBasicMaterial>(null!);
@@ -72,7 +162,7 @@ function ForkPath({ side, glow }: { side: "A" | "B"; glow: THREE.Texture }) {
           ref={coreMat}
           color={color}
           transparent
-          blending={THREE.AdditiveBlending}
+          blending={P.blending}
           depthWrite={false}
         />
       </mesh>
@@ -82,7 +172,7 @@ function ForkPath({ side, glow }: { side: "A" | "B"; glow: THREE.Texture }) {
           color={color}
           transparent
           opacity={0.16}
-          blending={THREE.AdditiveBlending}
+          blending={P.blending}
           depthWrite={false}
         />
       </mesh>
@@ -105,9 +195,10 @@ function FlowParticles({
   glow: THREE.Texture;
   speed?: number;
 }) {
+  const P = usePalette();
   const geo = useMemo(() => {
     const g = new THREE.BufferGeometry();
-    g.setAttribute("position", new THREE.BufferAttribute(new Float32Array(count * 3), 3));
+    g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(count * 3), 3));
     return g;
   }, [count]);
   const offsets = useMemo(
@@ -133,7 +224,7 @@ function FlowParticles({
         size={0.16}
         transparent
         opacity={0.9}
-        blending={THREE.AdditiveBlending}
+        blending={P.blending}
         depthWrite={false}
         sizeAttenuation
       />
@@ -143,6 +234,7 @@ function FlowParticles({
 
 /** The split node — a pulsing core with two counter-rotating instrument rings. */
 function SplitNode({ glow }: { glow: THREE.Texture }) {
+  const P = usePalette();
   const sprite = useRef<THREE.Sprite>(null!);
   const ringA = useRef<THREE.Mesh>(null!);
   const ringB = useRef<THREE.Mesh>(null!);
@@ -166,33 +258,34 @@ function SplitNode({ glow }: { glow: THREE.Texture }) {
       <sprite ref={sprite}>
         <spriteMaterial
           map={glow}
-          color={COLOR.wins}
+          color={P.wins}
           transparent
-          blending={THREE.AdditiveBlending}
+          opacity={P.nodeGlow}
+          blending={P.blending}
           depthWrite={false}
         />
       </sprite>
       <mesh>
         <sphereGeometry args={[0.09, 20, 20]} />
-        <meshBasicMaterial color={COLOR.wins} />
+        <meshBasicMaterial color={P.wins} />
       </mesh>
       <mesh ref={ringA}>
         <torusGeometry args={[0.34, 0.006, 8, 64]} />
         <meshBasicMaterial
-          color={COLOR.signal}
+          color={P.signal}
           transparent
           opacity={0.7}
-          blending={THREE.AdditiveBlending}
+          blending={P.blending}
           depthWrite={false}
         />
       </mesh>
       <mesh ref={ringB}>
         <torusGeometry args={[0.52, 0.004, 8, 64]} />
         <meshBasicMaterial
-          color={COLOR.faint}
+          color={P.faint}
           transparent
           opacity={0.5}
-          blending={THREE.AdditiveBlending}
+          blending={P.blending}
           depthWrite={false}
         />
       </mesh>
@@ -202,6 +295,7 @@ function SplitNode({ glow }: { glow: THREE.Texture }) {
 
 /** Validator motes — undecided, drifting in a slow orbit between the sides. */
 function Validators({ glow }: { glow: THREE.Texture }) {
+  const P = usePalette();
   const group = useRef<THREE.Group>(null!);
   const seeds = useMemo(
     () =>
@@ -232,10 +326,10 @@ function Validators({ glow }: { glow: THREE.Texture }) {
         <sprite key={i} scale={[0.22, 0.22, 0.22]}>
           <spriteMaterial
             map={glow}
-            color={i % 2 ? COLOR.a : COLOR.b}
+            color={i % 2 ? P.a : P.b}
             transparent
             opacity={0.55}
-            blending={THREE.AdditiveBlending}
+            blending={P.blending}
             depthWrite={false}
           />
         </sprite>
@@ -246,12 +340,13 @@ function Validators({ glow }: { glow: THREE.Texture }) {
 
 /** Deep star field in the three brand hues, slowly rotating. */
 function StarField() {
+  const P = usePalette();
   const ref = useRef<THREE.Points>(null!);
   const { positions, colors } = useMemo(() => {
     const n = 1600;
     const positions = new Float32Array(n * 3);
     const colors = new Float32Array(n * 3);
-    const palette = [COLOR.faint, COLOR.faint, COLOR.faint, COLOR.a, COLOR.b, COLOR.signal];
+    const palette = [P.faint, P.faint, P.faint, P.a, P.b, P.signal];
     for (let i = 0; i < n; i++) {
       const r = 6 + Math.random() * 10;
       const theta = Math.random() * Math.PI * 2;
@@ -265,7 +360,7 @@ function StarField() {
       colors[i * 3 + 2] = c.b;
     }
     return { positions, colors };
-  }, []);
+  }, [P]);
 
   useFrame(({ clock }) => {
     if (ref.current) ref.current.rotation.y = clock.elapsedTime * 0.008;
@@ -281,11 +376,38 @@ function StarField() {
         size={0.035}
         vertexColors
         transparent
-        opacity={0.75}
+        opacity={P.starOpacity}
         depthWrite={false}
         sizeAttenuation
       />
     </points>
+  );
+}
+
+/** The instrument itself — everything that carries the theme palette. */
+function Instrument({ glow }: { glow: THREE.Texture }) {
+  const P = usePalette();
+  const stem = useMemo(() => new THREE.TubeGeometry(stemCurve, 12, 0.016, 8), []);
+  return (
+    <Rig>
+      <StarField />
+      <gridHelper args={[36, 72, P.gridA, P.gridB]} position={[0, -2.6, -2]} />
+      {/* stem — the undisputed fact arriving at the split */}
+      <mesh geometry={stem}>
+        <meshBasicMaterial
+          color={P.wins}
+          transparent
+          opacity={0.5}
+          blending={P.blending}
+          depthWrite={false}
+        />
+      </mesh>
+      <FlowParticles curve={stemCurve} color={P.wins} count={16} glow={glow} speed={0.18} />
+      <SplitNode glow={glow} />
+      <ForkPath side="A" glow={glow} />
+      <ForkPath side="B" glow={glow} />
+      <Validators glow={glow} />
+    </Rig>
   );
 }
 
@@ -305,38 +427,22 @@ function Rig({ children }: { children: React.ReactNode }) {
 export function HeroScene() {
   const reduced = prefersReducedMotion();
   const glow = useMemo(() => makeGlowTexture(), []);
+  const themeName = useThemeName();
+  const palette = useMemo(() => makePalette(themeName), [themeName]);
 
   return (
     <Canvas
       camera={{ fov: 42, position: [0, 0.15, 5.4] }}
       dpr={[1, 2]}
-      frameloop={reduced ? "demand" : "always"}
+      frameloop={reduced ? 'demand' : 'always'}
       gl={{ antialias: true, alpha: true }}
-      style={{ background: "transparent" }}
+      style={{ background: 'transparent' }}
     >
-      <fog attach="fog" args={["#0E1116", 7.5, 16]} />
-      <Rig>
-        <StarField />
-        <gridHelper
-          args={[36, 72, "#5A6675", "#2E3843"]}
-          position={[0, -2.6, -2]}
-        />
-        {/* stem — the undisputed fact arriving at the split */}
-        <mesh geometry={useMemo(() => new THREE.TubeGeometry(stemCurve, 12, 0.016, 8), [])}>
-          <meshBasicMaterial
-            color={COLOR.wins}
-            transparent
-            opacity={0.5}
-            blending={THREE.AdditiveBlending}
-            depthWrite={false}
-          />
-        </mesh>
-        <FlowParticles curve={stemCurve} color={COLOR.wins} count={16} glow={glow} speed={0.18} />
-        <SplitNode glow={glow} />
-        <ForkPath side="A" glow={glow} />
-        <ForkPath side="B" glow={glow} />
-        <Validators glow={glow} />
-      </Rig>
+      <fog attach="fog" args={[palette.fog, 7.5, 16]} />
+      <PaletteCtx.Provider value={palette}>
+        {/* remount the instrument on theme change so blending modes reset cleanly */}
+        <Instrument key={themeName} glow={glow} />
+      </PaletteCtx.Provider>
     </Canvas>
   );
 }
