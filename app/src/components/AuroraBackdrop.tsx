@@ -75,6 +75,29 @@ export function AuroraBackdrop({
       ? { x: W * 0.70, y: H * 0.5 }     // resolved core, mid-right
       : { x: W * 0.72, y: H * 0.22 });  // source high-right, streams fall away
 
+    // Motes are drawn from pre-rendered glow sprites (one per hue) rather than
+    // allocating a fresh radial gradient for every mote every frame — that
+    // per-frame gradient churn was the main CPU/GC cost behind home-page scroll
+    // jank (this backdrop spans the whole page, so it can't just pause on scroll).
+    const SPRITE = 64;
+    const moteSprites = new Map<string, HTMLCanvasElement>();
+    const spriteFor = (c: Rgb): HTMLCanvasElement => {
+      const key = `${c[0]},${c[1]},${c[2]}`;
+      let s = moteSprites.get(key);
+      if (!s) {
+        s = document.createElement('canvas');
+        s.width = s.height = SPRITE;
+        const sc = s.getContext('2d')!;
+        const g = sc.createRadialGradient(SPRITE / 2, SPRITE / 2, 0, SPRITE / 2, SPRITE / 2, SPRITE / 2);
+        g.addColorStop(0, rgba(c, pal.dark ? 0.6 : 0.42));
+        g.addColorStop(1, rgba(c, 0));
+        sc.fillStyle = g;
+        sc.fillRect(0, 0, SPRITE, SPRITE);
+        moteSprites.set(key, s);
+      }
+      return s;
+    };
+
     let motes: Mote[] = [];
     const seedMotes = () => {
       const hues: Rgb[] = isExplorer
@@ -129,7 +152,7 @@ export function AuroraBackdrop({
         i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
       }
       const g = ctx.createLinearGradient(0, f.y, 0, H);
-      g.addColorStop(0, rgba(c, pal.dark ? 0.6 : 0.42));
+      g.addColorStop(0, rgba(c, pal.dark ? 0.4 : 0.28));
       g.addColorStop(1, rgba(c, 0));
       ctx.strokeStyle = g;
       ctx.lineWidth = 2;
@@ -149,7 +172,7 @@ export function AuroraBackdrop({
         const c = k % 2 ? pal.signal : pal.gold;
         const g = ctx.createLinearGradient(0, y - 40, 0, y + 40);
         g.addColorStop(0, rgba(c, 0));
-        g.addColorStop(0.5, rgba(c, pal.dark ? 0.18 : 0.12));
+        g.addColorStop(0.5, rgba(c, pal.dark ? 0.12 : 0.08));
         g.addColorStop(1, rgba(c, 0));
         ctx.fillStyle = g;
         ctx.fillRect(0, y - 40, W, 80);
@@ -172,7 +195,7 @@ export function AuroraBackdrop({
         const breath = 0.85 + Math.sin(bt * 1.6) * 0.15;
         const r = Math.max(W, H) * bl.rad * 0.7 * breath;
         const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
-        g.addColorStop(0, rgba(bl.c(), pal.dark ? 0.42 : 0.24));
+        g.addColorStop(0, rgba(bl.c(), pal.dark ? 0.28 : 0.16));
         g.addColorStop(1, rgba(bl.c(), 0));
         ctx.fillStyle = g;
         ctx.fillRect(0, 0, W, H);
@@ -205,13 +228,10 @@ export function AuroraBackdrop({
           if (m.x > W + 6) m.x = -6;
         }
         const tw = 0.55 + Math.sin(time * 0.002 + m.ph) * 0.45;
-        const g = ctx.createRadialGradient(m.x, m.y, 0, m.x, m.y, m.r * 4);
-        g.addColorStop(0, rgba(m.c, (pal.dark ? 0.85 : 0.55) * tw));
-        g.addColorStop(1, rgba(m.c, 0));
-        ctx.fillStyle = g;
-        ctx.beginPath();
-        ctx.arc(m.x, m.y, m.r * 4, 0, Math.PI * 2);
-        ctx.fill();
+        const rad = m.r * 4;
+        ctx.globalAlpha = tw;
+        ctx.drawImage(spriteFor(m.c), m.x - rad, m.y - rad, rad * 2, rad * 2);
+        ctx.globalAlpha = 1;
       }
 
       // Focus core — a source (assert) or a resolved node (explorer).
@@ -219,8 +239,8 @@ export function AuroraBackdrop({
       const coreR = Math.min(W, H) * (isExplorer ? 0.09 : 0.07) * pulse;
       const coreC = isExplorer ? pal.gold : pal.signal;
       const cg = ctx.createRadialGradient(f.x, f.y, 0, f.x, f.y, coreR * 3.5);
-      cg.addColorStop(0, rgba(coreC, pal.dark ? 0.8 : 0.45));
-      cg.addColorStop(0.4, rgba(coreC, pal.dark ? 0.22 : 0.12));
+      cg.addColorStop(0, rgba(coreC, pal.dark ? 0.55 : 0.32));
+      cg.addColorStop(0.4, rgba(coreC, pal.dark ? 0.15 : 0.09));
       cg.addColorStop(1, rgba(coreC, 0));
       ctx.fillStyle = cg;
       ctx.beginPath();
@@ -228,12 +248,29 @@ export function AuroraBackdrop({
       ctx.fill();
 
       ctx.globalCompositeOperation = 'source-over';
-      if (!reduced) raf = requestAnimationFrame(draw);
+      if (!reduced && onScreen && !document.hidden) raf = requestAnimationFrame(draw);
+      else raf = 0;
     };
+
+    // Stop the loop when the backdrop is scrolled out of view or the tab is
+    // hidden, and pick it back up when it returns.
+    let onScreen = true;
+    const resume = () => {
+      if (!raf && !reduced && onScreen && !document.hidden) raf = requestAnimationFrame(draw);
+    };
+    const io = new IntersectionObserver(
+      ([e]) => { onScreen = e.isIntersecting; if (onScreen) resume(); },
+      { threshold: 0 },
+    );
+    io.observe(canvas);
+    const onVis = () => { if (!document.hidden) resume(); };
+    document.addEventListener('visibilitychange', onVis);
+
     raf = requestAnimationFrame(draw);
 
     const mo = new MutationObserver(() => {
       pal = samplePalette();
+      moteSprites.clear(); // hues + dark/light alpha changed — rebuild glow sprites
       seedMotes();
       if (reduced) { cancelAnimationFrame(raf); raf = requestAnimationFrame(draw); }
     });
@@ -243,6 +280,8 @@ export function AuroraBackdrop({
       cancelAnimationFrame(raf);
       ro.disconnect();
       mo.disconnect();
+      io.disconnect();
+      document.removeEventListener('visibilitychange', onVis);
     };
   }, [variant]);
 

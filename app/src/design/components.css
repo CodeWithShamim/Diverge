@@ -297,7 +297,8 @@
    absolute layer filling the stage at z-index 0; the content rides directly on
    top at z-index 1 (NOT a negative z-index, which the opaque body fill would
    hide). Weighted right, fading left so the form/text stay legible. */
-.view-stage { position: relative; overflow: hidden; min-height: 84vh; }
+/* Fills main (flex child) so the aurora reaches the footer with no gap. */
+.view-stage { position: relative; overflow: hidden; }
 .view-stage > .shell { position: relative; z-index: 1; }
 
 .view-backdrop {
@@ -309,6 +310,19 @@
   mask-image: linear-gradient(to right, transparent 0%, rgba(0,0,0,0.12) 30%, #000 72%);
 }
 .view-backdrop canvas { display: block; width: 100%; height: 100%; }
+/* Scrim: a translucent wash over the field so it reads calm and professional,
+   not loud. Black on dark; a soft light wash on light so it stays clean, not
+   muddy. Sits above the canvas, below the content (which is z-index 1). */
+.view-backdrop::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: rgba(9, 11, 15, 0.42);
+}
+:root[data-theme="light"] .view-backdrop::after {
+  background: rgba(245, 246, 248, 0.4);
+}
 
 @media (max-width: 900px) {
   /* Narrow: content spans full width, so wash the whole field evenly and faint
@@ -324,7 +338,6 @@
 .ftr {
   border-top: 1px solid var(--seam);
   background: var(--field-sunken);
-  margin-top: var(--s-8);
 }
 .ftr-inner {
   max-width: 1200px;

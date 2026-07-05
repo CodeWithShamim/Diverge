@@ -10,7 +10,7 @@
  *  instrument remounts on theme change so every material picks up the new
  *  blending mode cleanly. */
 
-import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { prefersReducedMotion } from '../../design/motion';
@@ -418,12 +418,41 @@ export function HeroScene() {
   const themeName = useThemeName();
   const palette = useMemo(() => makePalette(themeName), [themeName]);
 
+  // Only render while the hero is actually on screen and the tab is visible.
+  // Off-screen WebGL rendering is the biggest drain on the scroll thread — once
+  // you scroll past the hero there is nothing to see, so stop drawing it.
+  const [active, setActive] = useState(true);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const setCanvas = useCallback((el: HTMLCanvasElement | null) => {
+    canvasRef.current = el;
+  }, []);
+  useEffect(() => {
+    const el = canvasRef.current;
+    if (!el) return;
+    let onScreen = true;
+    const evalActive = () => setActive(onScreen && !document.hidden);
+    const io = new IntersectionObserver(
+      ([e]) => {
+        onScreen = e.isIntersecting;
+        evalActive();
+      },
+      { threshold: 0 },
+    );
+    io.observe(el);
+    document.addEventListener('visibilitychange', evalActive);
+    return () => {
+      io.disconnect();
+      document.removeEventListener('visibilitychange', evalActive);
+    };
+  }, []);
+
   return (
     <Canvas
+      ref={setCanvas}
       camera={{ fov: 42, position: [0, 0.15, 5.4] }}
-      dpr={[1, 2]}
-      frameloop={reduced ? 'demand' : 'always'}
-      gl={{ antialias: true, alpha: true }}
+      dpr={[1, 1.75]}
+      frameloop={reduced ? 'demand' : active ? 'always' : 'never'}
+      gl={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}
       style={{ background: 'transparent' }}
     >
       <fog attach="fog" args={[palette.fog, 7.5, 16]} />
