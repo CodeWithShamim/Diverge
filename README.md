@@ -314,6 +314,34 @@ Direct tests run the real contract code against `tests/mocks/genlayer` — a
 synchronous mini-harness of the SDK (storage, proxies, run_nondet, transfer
 ledger) with the LLM/web monkeypatched per test.
 
+**Latest run:** ✅ **89 passed** (`tests/direct`).
+
+## Lint the contracts
+
+All six contracts are checked with the official GenVM linter
+([`genvm-linter`](https://skills.genlayer.com/), the `genvm-lint` skill):
+
+```bash
+.venv/bin/python -m pip install genvm-linter
+for f in contracts/*.py; do .venv/bin/genvm-lint check "$f"; done
+```
+
+`check` runs both AST safety and SDK semantic validation. **Latest run: all 6
+contracts pass** (exit 0, `ok: true`):
+
+| Contract | Lint | Validate | Methods | Warnings |
+| --- | --- | --- | --- | --- |
+| `diverge.py`               | ✅ | ✅ `Diverge`              | 5 (2 view, 3 write)  | 7  |
+| `appeal_manager.py`        | ✅ | ✅ `AppealManager`        | 3 (1 view, 2 write)  | 9  |
+| `dispute_registry.py`      | ✅ | ✅ `DisputeRegistry`      | 11 (3 view, 8 write) | 26 |
+| `resolution_log.py`        | ✅ | ✅ `ResolutionLog`        | 5 (3 view, 2 write)  | 6  |
+| `stake_vault.py`           | ✅ | ✅ `StakeVault`           | 8 (2 view, 6 write)  | 19 |
+| `mock_optimistic_oracle.py`| ✅ | ✅ `MockOptimisticOracle` | 4 (1 view, 3 write)  | 4  |
+
+The only warnings are one recurring style rule — `Bare Python exception
+'Exception' in contract; use gl.vm.UserError("message") instead` — on the guard
+clauses. These are non-blocking; the check still passes.
+
 ## Run the dApp
 
 ```bash
