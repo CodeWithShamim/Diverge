@@ -399,3 +399,59 @@
 
 .docs-code { max-width: 760px; margin-top: var(--s-3); }
 .docs-network { max-width: 760px; }
+
+/* ---- toasts — contract errors surfaced loudly (FR-4.2) ---------------------- */
+.toaster {
+  position: fixed;
+  right: var(--s-5);
+  bottom: var(--s-5);
+  z-index: 1000;
+  display: flex;
+  flex-direction: column-reverse;
+  gap: var(--s-3);
+  max-width: min(420px, calc(100vw - var(--s-5) * 2));
+}
+.toast {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--s-3);
+  padding: var(--s-3) var(--s-4);
+  border: 1px solid var(--seam-bright);
+  border-left-width: 3px;
+  border-radius: var(--radius);
+  background: var(--field-raised);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5), 0 0 0 1px var(--seam);
+  animation: toast-in var(--dur-move) var(--ease-instrument);
+}
+@keyframes toast-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.toast-error   { border-left-color: var(--danger); background: var(--tint-danger); }
+.toast-warn    { border-left-color: var(--unresolved); }
+.toast-success { border-left-color: var(--signal); }
+.toast-info    { border-left-color: var(--seam-bright); }
+.toast-body { flex: 1; min-width: 0; }
+.toast-title {
+  font: 500 13px/18px var(--font-display);
+  color: var(--read);
+  margin: 0;
+}
+.toast-error .toast-title { color: var(--danger); }
+.toast-message {
+  font: 400 13px/19px var(--font-mono);
+  color: var(--read-muted);
+  margin: 4px 0 0;
+  overflow-wrap: anywhere;
+}
+.toast-close {
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  color: var(--read-faint);
+  font-size: 13px;
+  line-height: 1;
+  padding: 2px;
+  cursor: pointer;
+}
+.toast-close:hover { color: var(--read); }

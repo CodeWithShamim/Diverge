@@ -12,6 +12,8 @@ import {
 import type { TxProgress } from "./types";
 import { getWriteClient } from "./client";
 import { getActiveAddress, getActiveProvider } from "./wallet";
+import { extractContractError, fromThrown, titleFor } from "./txError";
+import { toast } from "./toast";
 
 type OnProgress = (p: TxProgress) => void;
 
@@ -25,7 +27,9 @@ async function realWrite(
   const provider = getActiveProvider();
   const account = getActiveAddress();
   if (!provider || !account) {
-    onProgress({ state: "failed", detail: "Connect a wallet to sign this transaction." });
+    const detail = "Connect a wallet to sign this transaction.";
+    toast.error("No wallet connected", detail);
+    onProgress({ state: "failed", detail });
     return;
   }
   try {
@@ -53,20 +57,26 @@ async function realWrite(
       hash,
       status: "FINALIZED",
     });
-    // FR-4.3 — GenLayer can finalize in a soft-error state; surface it, never hide it
-    const softError =
-      final?.consensus_data?.leader_receipt?.execution_result === "ERROR";
-    if (softError) {
+    // FR-4.3 — GenLayer finalizes even when the contract raises; the message lives
+    // in leader_receipt[].genvm_result.stderr. Surface it, never hide it as success.
+    const err = extractContractError(final);
+    if (err) {
+      // Deterministic preconditions (EXPECTED) are a failed write; non-determinism
+      // (LLM_ERROR) is the FR-4.3 soft-error / UNRESOLVED path with bonds returned.
+      const softError = err.category === "LLM_ERROR";
+      toast.error(titleFor(err.category), err.message);
       onProgress({
-        state: "soft-error",
+        state: softError ? "soft-error" : "failed",
         hash,
-        detail: "Validators failed to converge — UNRESOLVED path · bonds returned",
+        detail: err.raw,
       });
     } else {
       onProgress({ state: "finalized", hash });
     }
   } catch (e: any) {
-    onProgress({ state: "failed", detail: e?.message ?? String(e) });
+    const err = fromThrown(e);
+    toast.error(titleFor(err.category), err.message);
+    onProgress({ state: "failed", hash: e?.hash, detail: err.raw });
   }
 }
 

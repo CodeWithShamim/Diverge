@@ -32,6 +32,11 @@
   --closed:       #414A54;
   --unresolved:   #8A6D3B;
 
+  /* Error / danger — contract reverts (EXPECTED etc.) */
+  --danger:       #E0574A;
+  --danger-dim:   #6B2A24;
+  --tint-danger:  #241311;
+
   /* Tints (behind chips/rows only) */
   --tint-a:       #221A12;
   --tint-b:       #102227;

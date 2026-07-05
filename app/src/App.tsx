@@ -11,6 +11,7 @@ import { initLenis } from "./design/motion";
 import { CHAIN_ID, CHAIN_NAME, MOCK_MODE } from "./config/chain";
 import { WalletControl } from "./components/WalletButton";
 import { Footer } from "./components/Footer";
+import { Toaster } from "./components/Toaster";
 
 export default function App() {
   useEffect(() => {
@@ -59,6 +60,7 @@ export default function App() {
       </main>
       <Footer />
       </div>
+      <Toaster />
     </HashRouter>
   );
 }
