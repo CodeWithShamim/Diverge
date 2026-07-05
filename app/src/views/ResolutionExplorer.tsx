@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { getResolution } from '../lib/reads';
 import type { Resolution } from '../lib/types';
 import { ADDRESSES } from '../config/chain';
+import { Loader } from '../components/Loader';
 
 /** Resolution explorer — for consuming-protocol devs (FR-7.1). Read-only:
  *  no primary buttons, no wallet prompts (§5.7). */
@@ -10,13 +11,19 @@ export function ResolutionExplorer() {
   const [params, setParams] = useSearchParams();
   const [query, setQuery] = useState(params.get('id') ?? '');
   const [result, setResult] = useState<Resolution | null | 'none'>(null);
+  const [loading, setLoading] = useState(false);
 
   const lookup = async (idStr: string) => {
     const id = Number(idStr);
     if (Number.isNaN(id) || idStr === '') return;
     setParams({ id: idStr });
-    const r = await getResolution(id);
-    setResult(r ?? 'none');
+    setLoading(true);
+    try {
+      const r = await getResolution(id);
+      setResult(r ?? 'none');
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -55,14 +62,16 @@ if log.view().is_final(dispute_id):
         </button>
       </div>
 
-      {result === 'none' && (
+      {loading && <Loader block size="sm" label="Fetching resolution" />}
+
+      {!loading && result === 'none' && (
         <p className="notice">
           No finalized resolution for that id. <span className="t-data">is_final == false</span> —
           consuming protocols fall back to their own timeout.
         </p>
       )}
 
-      {result && result !== 'none' && (
+      {!loading && result && result !== 'none' && (
         <div className="panel explorer-result" style={{ maxWidth: 720 }}>
           <dl className="kv">
             <dt>dispute_id</dt>

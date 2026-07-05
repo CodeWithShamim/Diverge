@@ -1,0 +1,227 @@
+/* ============================================================================
+   LOADER — "The Divergence, mid-split."  A colorful, kinetic loading system
+   built entirely from brand tokens (claim-a / claim-b / signal / unresolved /
+   danger). The whole palette diverges: a conic ring cycles every hue while a
+   fork glyph splits into its two claim colors. Vibrant, but still instrument
+   grade — reduced-motion users get a calm, static state.
+   ========================================================================= */
+
+/* ---- shared color chords -------------------------------------------------- */
+:root {
+  --load-conic:
+    conic-gradient(
+      from 0deg,
+      var(--claim-a),
+      var(--unresolved),
+      var(--claim-b),
+      var(--signal),
+      var(--claim-a)
+    );
+}
+
+/* screen-reader-only utility (loaders announce a label but hide it visually
+   when the shimmering caption already carries it) */
+.sr-only {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ---- the ring ------------------------------------------------------------- */
+.loader {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--s-4);
+  --ring: 76px;
+}
+.loader--sm { --ring: 44px; gap: var(--s-2); }
+.loader--lg { --ring: 128px; }
+
+.loader-ring {
+  position: relative;
+  width: var(--ring);
+  height: var(--ring);
+  display: grid;
+  place-items: center;
+}
+
+/* rotating multicolor halo */
+.loader-ring::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: var(--load-conic);
+  /* punch out the center → a ring */
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(50% - 5px), #000 calc(50% - 4px));
+          mask: radial-gradient(farthest-side, transparent calc(50% - 5px), #000 calc(50% - 4px));
+  animation: loader-spin 1.15s linear infinite;
+  filter: saturate(1.15);
+}
+
+/* soft chromatic glow that breathes underneath the ring */
+.loader-ring::after {
+  content: "";
+  position: absolute;
+  inset: -22%;
+  border-radius: 50%;
+  background: var(--load-conic);
+  filter: blur(18px);
+  opacity: 0.45;
+  animation: loader-spin 2.3s linear infinite reverse, loader-breathe 2.1s ease-in-out infinite;
+  z-index: -1;
+}
+
+/* the diverging fork at the heart of the ring */
+.loader-fork {
+  font: 700 calc(var(--ring) * 0.34) / 1 var(--font-display);
+  letter-spacing: -0.04em;
+  display: inline-flex;
+  animation: loader-breathe 1.4s var(--ease-instrument) infinite;
+  user-select: none;
+}
+.loader-fork .arm-a { color: var(--claim-a); animation: arm-a-pulse 1.4s ease-in-out infinite; }
+.loader-fork .arm-b { color: var(--claim-b); animation: arm-b-pulse 1.4s ease-in-out infinite; }
+
+/* ---- shimmering label ----------------------------------------------------- */
+.loader-label {
+  font: 500 12px/16px var(--font-mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  background: linear-gradient(
+    100deg,
+    var(--read-muted) 0%,
+    var(--read-muted) 38%,
+    var(--claim-b) 46%,
+    var(--signal) 50%,
+    var(--claim-a) 54%,
+    var(--read-muted) 62%,
+    var(--read-muted) 100%
+  );
+  background-size: 220% 100%;
+  -webkit-background-clip: text;
+          background-clip: text;
+  color: transparent;
+  animation: loader-shimmer 2.1s linear infinite;
+}
+.loader-label::after {
+  content: "";
+  animation: loader-dots 1.4s steps(4, end) infinite;
+}
+
+/* ---- fullscreen boot / route overlay -------------------------------------- */
+.loader-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  background: var(--field);
+  overflow: hidden;
+  animation: loader-fade-in 0.3s var(--ease-instrument) both;
+}
+.loader-screen--inline {
+  position: relative;
+  min-height: 340px;
+  z-index: 0;
+  background: transparent;
+}
+.loader-screen[data-leaving="true"] {
+  animation: loader-fade-out 0.45s var(--ease-instrument) both;
+  pointer-events: none;
+}
+
+/* drifting aurora blobs — the "crazy colorful" backdrop */
+.loader-aurora {
+  position: absolute;
+  inset: -20%;
+  z-index: 0;
+  filter: blur(60px);
+  opacity: 0.55;
+  pointer-events: none;
+}
+.loader-aurora span {
+  position: absolute;
+  width: 42vmax;
+  height: 42vmax;
+  border-radius: 50%;
+  mix-blend-mode: screen;
+  will-change: transform;
+}
+.loader-aurora span:nth-child(1) { background: var(--claim-a); top: -10%; left: -6%;  animation: drift-1 9s ease-in-out infinite; }
+.loader-aurora span:nth-child(2) { background: var(--claim-b); bottom: -14%; right: -8%; animation: drift-2 11s ease-in-out infinite; }
+.loader-aurora span:nth-child(3) { background: var(--signal);  top: 22%; right: 18%;      animation: drift-3 13s ease-in-out infinite; }
+.loader-aurora span:nth-child(4) { background: var(--unresolved); bottom: 8%; left: 20%;   animation: drift-1 15s ease-in-out infinite reverse; }
+
+/* light theme: auroras would blow out on white — dial them back */
+:root[data-theme="light"] .loader-aurora { opacity: 0.32; }
+
+.loader-screen .loader { position: relative; z-index: 1; }
+
+/* ---- inline block loader (drops into content flow) ------------------------ */
+.loader-block {
+  display: grid;
+  place-items: center;
+  padding: var(--s-8) var(--s-4);
+  min-height: 200px;
+}
+
+/* ---- keyframes ------------------------------------------------------------ */
+@keyframes loader-spin { to { transform: rotate(1turn); } }
+
+@keyframes loader-breathe {
+  0%, 100% { transform: scale(1);    opacity: 1;   }
+  50%      { transform: scale(1.08); opacity: 0.9; }
+}
+@keyframes arm-a-pulse {
+  0%, 100% { transform: translateX(0);    text-shadow: 0 0 0 transparent; }
+  50%      { transform: translateX(-2px); text-shadow: 0 0 14px var(--claim-a); }
+}
+@keyframes arm-b-pulse {
+  0%, 100% { transform: translateX(0);   text-shadow: 0 0 0 transparent; }
+  50%      { transform: translateX(2px); text-shadow: 0 0 14px var(--claim-b); }
+}
+@keyframes loader-shimmer {
+  0%   { background-position: 120% 0; }
+  100% { background-position: -120% 0; }
+}
+@keyframes loader-dots {
+  0%   { content: ""; }
+  25%  { content: "."; }
+  50%  { content: ".."; }
+  75%  { content: "..."; }
+  100% { content: ""; }
+}
+@keyframes loader-fade-in  { from { opacity: 0; } to { opacity: 1; } }
+@keyframes loader-fade-out { from { opacity: 1; } to { opacity: 0; visibility: hidden; } }
+
+@keyframes drift-1 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50%      { transform: translate(8vmax, 6vmax) scale(1.15); }
+}
+@keyframes drift-2 {
+  0%, 100% { transform: translate(0, 0) scale(1.1); }
+  50%      { transform: translate(-7vmax, -5vmax) scale(0.92); }
+}
+@keyframes drift-3 {
+  0%, 100% { transform: translate(0, 0) scale(0.95); }
+  50%      { transform: translate(-6vmax, 7vmax) scale(1.2); }
+}
+
+/* ---- respect reduced motion: kill the churn, keep the color --------------- */
+@media (prefers-reduced-motion: reduce) {
+  .loader-ring::before { animation: none; }
+  .loader-ring::after,
+  .loader-fork,
+  .loader-fork .arm-a,
+  .loader-fork .arm-b,
+  .loader-label,
+  .loader-aurora span { animation: none; }
+  .loader-label { background: none; color: var(--read-muted); }
+  .loader-label::after { animation: none; content: "…"; }
+}

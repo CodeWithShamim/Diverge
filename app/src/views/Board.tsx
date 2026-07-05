@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { getBoard } from '../lib/reads';
 import type { Dispute } from '../lib/types';
 import { DisputeCard } from '../components/DisputeCard';
+import { Loader } from '../components/Loader';
 import { fadeIn } from '../design/motion';
 
 /** Dispute board — deliberately asymmetric (a list); the bilateral symmetry is
@@ -40,7 +41,7 @@ export function Board() {
         </div>
       </div>
 
-      {disputes === null && <p className="t-small">Reading the board…</p>}
+      {disputes === null && <Loader block label="Reading the board" />}
 
       {disputes !== null && disputes.length === 0 && (
         <div className="board-empty">No open disputes. Assert a claim to open the fork.</div>

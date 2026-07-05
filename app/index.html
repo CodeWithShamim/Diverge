@@ -25,7 +25,58 @@
     />
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <!-- Boot splash: paints before the JS bundle loads; React clears #root on
+           mount. Self-contained inline styles so it needs no bundled CSS. -->
+      <div id="boot-splash" aria-label="Loading Diverge" role="status">
+        <div class="boot-aurora"><span></span><span></span><span></span><span></span></div>
+        <div class="boot-ring"><span class="boot-fork"><i class="a">⟋</i><i class="b">⟍</i></span></div>
+        <div class="boot-label">DIVERGING</div>
+      </div>
+    </div>
+    <style>
+      #boot-splash {
+        position: fixed; inset: 0; display: flex; flex-direction: column;
+        align-items: center; justify-content: center; gap: 18px; overflow: hidden;
+        background: #0E1116; z-index: 9999;
+      }
+      html[data-theme="light"] #boot-splash { background: #F5F6F8; }
+      .boot-aurora { position: absolute; inset: -20%; filter: blur(60px); opacity: .5; }
+      html[data-theme="light"] .boot-aurora { opacity: .3; }
+      .boot-aurora span {
+        position: absolute; width: 42vmax; height: 42vmax; border-radius: 50%;
+        mix-blend-mode: screen; will-change: transform;
+      }
+      .boot-aurora span:nth-child(1){ background:#E0894A; top:-10%; left:-6%;  animation: bootDrift 9s ease-in-out infinite; }
+      .boot-aurora span:nth-child(2){ background:#4FB0C9; bottom:-14%; right:-8%; animation: bootDrift 11s ease-in-out infinite reverse; }
+      .boot-aurora span:nth-child(3){ background:#5B8BF0; top:22%; right:18%;    animation: bootDrift 13s ease-in-out infinite; }
+      .boot-aurora span:nth-child(4){ background:#CBA255; bottom:8%; left:20%;    animation: bootDrift 15s ease-in-out infinite reverse; }
+      .boot-ring {
+        position: relative; width: 128px; height: 128px; border-radius: 50%;
+        display: grid; place-items: center; z-index: 1;
+        background: conic-gradient(from 0deg,#E0894A,#CBA255,#4FB0C9,#5B8BF0,#E0894A);
+        -webkit-mask: radial-gradient(farthest-side, transparent calc(50% - 6px), #000 calc(50% - 5px));
+                mask: radial-gradient(farthest-side, transparent calc(50% - 6px), #000 calc(50% - 5px));
+        animation: bootSpin 1.15s linear infinite;
+      }
+      .boot-fork {
+        position: absolute; inset: 0; display: grid; place-items: center;
+        font: 700 42px/1 'Space Grotesk', system-ui, sans-serif; letter-spacing: -.04em;
+        -webkit-mask: none; mask: none;
+      }
+      .boot-fork i { font-style: normal; }
+      .boot-fork .a { color:#E0894A; } .boot-fork .b { color:#4FB0C9; }
+      .boot-label {
+        z-index: 1; font: 500 12px/16px 'JetBrains Mono', ui-monospace, monospace;
+        letter-spacing: .16em; color: #99A2AD; animation: bootPulse 1.6s ease-in-out infinite;
+      }
+      @keyframes bootSpin { to { transform: rotate(1turn); } }
+      @keyframes bootPulse { 0%,100%{opacity:.5} 50%{opacity:1} }
+      @keyframes bootDrift { 0%,100%{transform:translate(0,0) scale(1)} 50%{transform:translate(7vmax,6vmax) scale(1.15)} }
+      @media (prefers-reduced-motion: reduce) {
+        .boot-ring, .boot-aurora span, .boot-label { animation: none; }
+      }
+    </style>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

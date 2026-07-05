@@ -9,6 +9,7 @@ import { SubQuestionBridge } from "../components/SubQuestionBridge";
 import { EvidencePanel } from "../components/EvidencePanel";
 import { TxLadder } from "../components/TxLadder";
 import { Divergence } from "../components/Divergence";
+import { Loader } from "../components/Loader";
 import { revealDispute } from "../design/motion";
 
 /** Dispute detail — the bilateral 5/2/5 layout mirrored across the center seam.
@@ -60,9 +61,7 @@ export function DisputeDetail() {
   if (!dispute) {
     return (
       <div className="shell">
-        <p className="t-small" style={{ marginTop: 48 }}>
-          Reading dispute…
-        </p>
+        <Loader block label="Reading dispute" />
       </div>
     );
   }
