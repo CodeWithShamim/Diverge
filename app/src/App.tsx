@@ -11,6 +11,7 @@ import { Docs } from "./views/Docs";
 import { initLenis } from "./design/motion";
 import { CHAIN_ID, CHAIN_NAME, MOCK_MODE } from "./config/chain";
 import { WalletControl } from "./components/WalletButton";
+import { ThemeToggle } from "./components/ThemeToggle";
 import { Footer } from "./components/Footer";
 import { Toaster } from "./components/Toaster";
 
@@ -41,6 +42,7 @@ export default function App() {
               Docs
             </NavLink>
           </nav>
+          <ThemeToggle />
           <WalletControl />
           <span className="hdr-chain">
             {CHAIN_NAME} {CHAIN_ID}

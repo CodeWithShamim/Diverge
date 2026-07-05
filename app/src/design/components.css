@@ -38,6 +38,29 @@
   .hdr nav { flex: 1 1 100%; order: 3; }
 }
 
+/* ---- theme toggle --------------------------------------------------------- */
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  background: transparent;
+  border: 1px solid var(--seam);
+  border-radius: var(--radius);
+  color: var(--read-muted);
+  cursor: pointer;
+  transition: color var(--dur-fast) var(--ease-instrument),
+    border-color var(--dur-fast) var(--ease-instrument),
+    background var(--dur-fast) var(--ease-instrument);
+}
+.theme-toggle:hover {
+  color: var(--read);
+  border-color: var(--seam-bright);
+  background: var(--field-raised);
+}
+
 /* ---- wallet control (Privy) ------------------------------------------------ */
 .wallet-connect { padding: 6px var(--s-3); font-size: 14px; }
 .wallet-connected {
@@ -218,6 +241,20 @@
 
 /* ---- divergence §7 ---------------------------------------------------------------------------- */
 .divergence-wrap { position: relative; height: 360px; border: 1px solid var(--seam); border-radius: var(--radius); background: var(--field-sunken); overflow: hidden; }
+/* The 3D scene and its ForkSVG fallback are tuned for a dark stage (near-white
+   winning path, mid-tone nodes). Keep them dark in light theme so the verdict
+   instrument stays legible, like the landing hero. */
+:root[data-theme="light"] .divergence-wrap {
+  --field-sunken: #090B0F;
+  --seam: #232A33;
+  --seam-bright: #38414C;
+  --read: #E9ECF1;
+  --read-muted: #99A2AD;
+  --read-faint: #626C78;
+  --wins: #EAEEF3;
+  --unresolved: #CBA255;
+  color-scheme: dark;
+}
 @media (max-width: 900px) { .divergence-wrap { height: 240px; } }
 .divergence-stamp {
   position: absolute; left: 50%; bottom: 40px; transform: translateX(-50%);

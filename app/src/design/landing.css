@@ -6,6 +6,31 @@
   overflow-x: clip;
 }
 
+/* The hero headline gradients are tuned for darkness (white/pale highlights).
+   In light theme they'd wash out, so re-tune the stops to darker, saturated
+   hues that read on paper. The 3D scene re-skins itself (see HeroScene). */
+:root[data-theme="light"] .grad-claims {
+  background-image: linear-gradient(
+    92deg,
+    var(--claim-a) 0%,
+    #c9803f 30%,
+    var(--read) 50%,
+    #2e93a6 70%,
+    var(--claim-b) 100%
+  );
+}
+:root[data-theme="light"] .grad-truth {
+  background-image: linear-gradient(
+    92deg,
+    var(--read) 15%,
+    #5b6676 50%,
+    var(--signal) 85%
+  );
+}
+:root[data-theme="light"] .hero-title {
+  text-shadow: none;
+}
+
 /* ---- hero ---------------------------------------------------------------- */
 .hero {
   position: relative;
@@ -16,6 +41,9 @@
   align-items: center;
   text-align: center;
   padding: var(--s-8) var(--s-5) var(--s-7);
+  /* The 3D canvas is transparent — the hero must paint its own dark stage,
+     otherwise the light-theme body shows through and washes it out. */
+  background: var(--field);
 }
 .hero-canvas {
   position: absolute;
@@ -53,7 +81,7 @@
   border: 1px solid var(--seam-bright);
   border-radius: 100px;
   padding: 6px 14px;
-  background: rgba(15, 18, 22, 0.55);
+  background: var(--glass-field);
   backdrop-filter: blur(6px);
   animation: eyebrow-glow 4s ease-in-out infinite;
 }
@@ -134,7 +162,7 @@
 }
 .btn-ghost-hero {
   backdrop-filter: blur(6px);
-  background: rgba(23, 27, 33, 0.5);
+  background: var(--glass-raised);
 }
 
 .hero-strip {

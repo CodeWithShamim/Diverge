@@ -314,11 +314,11 @@ export function HeroScene() {
       gl={{ antialias: true, alpha: true }}
       style={{ background: "transparent" }}
     >
-      <fog attach="fog" args={["#0F1216", 6.5, 15]} />
+      <fog attach="fog" args={["#0E1116", 7.5, 16]} />
       <Rig>
         <StarField />
         <gridHelper
-          args={[36, 72, "#3A424C", "#1A2027"]}
+          args={[36, 72, "#5A6675", "#2E3843"]}
           position={[0, -2.6, -2]}
         />
         {/* stem — the undisputed fact arriving at the split */}

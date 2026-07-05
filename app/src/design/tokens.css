@@ -1,25 +1,34 @@
 /* Diverge Design System — "The Divergence" §2–§4. Single source of truth.
    No component hardcodes a color, font, duration, or radius — tokens only. */
 
+/* ============================================================================
+   THEME — dark is the default (:root). Light overrides live under
+   :root[data-theme="light"]. A no-flash inline script in index.html stamps
+   data-theme before first paint. Every surface is a token, so the whole app
+   (and the marketing page below the hero) re-skins from these two blocks. */
+
 :root {
+  color-scheme: dark;
+
   /* Surfaces — instrument graphite + bone */
-  --field:        #0F1216;
-  --field-raised: #171B21;
-  --field-sunken: #0A0C0F;
+  --field:        #0E1116;
+  --field-raised: #161B22;
+  --field-sunken: #090B0F;
   --bone:         #ECEEF1;
 
   /* Text on field */
-  --read:         #E7EAEE;
-  --read-muted:   #9AA3AD;
-  --read-faint:   #5B6570;
+  --read:         #E9ECF1;
+  --read-muted:   #99A2AD;
+  --read-faint:   #626C78;
 
   /* Structure */
-  --seam:         #262C34;
-  --seam-bright:  #3A424C;
+  --seam:         #232A33;
+  --seam-bright:  #38414C;
 
   /* Signal — one interaction color */
   --signal:       #5B8BF0;
-  --signal-ink:   #0F1216;
+  --signal-hover: #7AA2F4;
+  --signal-ink:   #0B0E12;
 
   /* Claim sides — structurally opposed, balanced luminance */
   --claim-a:      #E0894A;
@@ -28,12 +37,12 @@
   --claim-b-dim:  #2A5A66;
 
   /* Verdict states */
-  --wins:         #E9EDF2;
+  --wins:         #EAEEF3;
   --closed:       #414A54;
-  --unresolved:   #8A6D3B;
+  --unresolved:   #CBA255;
 
   /* Error / danger — contract reverts (EXPECTED etc.) */
-  --danger:       #E0574A;
+  --danger:       #E5594C;
   --danger-dim:   #6B2A24;
   --tint-danger:  #241311;
 
@@ -41,6 +50,10 @@
   --tint-a:       #221A12;
   --tint-b:       #102227;
   --tint-signal:  #141C2E;
+
+  /* Translucent surfaces (glass panels / floating chips over live art) */
+  --glass-field:  rgba(14, 17, 22, 0.55);
+  --glass-raised: rgba(22, 27, 34, 0.72);
 
   /* Type */
   --font-display: 'Space Grotesk', system-ui, sans-serif;
@@ -60,6 +73,52 @@
   --dur-fast: 160ms;
   --dur-move: 320ms;
   --dur-diverge: 1800ms;
+}
+
+/* ---- LIGHT THEME ---------------------------------------------------------
+   Paper, not glare: soft grey field, white raised panels, ink text. Accent
+   hues are re-tuned (darker/denser) so claim-a, claim-b and signal still pass
+   contrast on light surfaces; tints become pale washes behind the same chips. */
+:root[data-theme="light"] {
+  color-scheme: light;
+
+  --field:        #F5F6F8;
+  --field-raised: #FFFFFF;
+  --field-sunken: #EBEDF1;
+  --bone:         #14181D;
+
+  --read:         #14181D;
+  --read-muted:   #555D68;
+  --read-faint:   #868E99;
+
+  --seam:         #E2E5EA;
+  --seam-bright:  #C6CCD3;
+
+  --signal:       #2F6FE0;
+  --signal-hover: #245CC4;
+  --signal-ink:   #FFFFFF;
+
+  --claim-a:      #B25E22;
+  --claim-a-dim:  #E6C29A;
+  --claim-b:      #196F82;
+  --claim-b-dim:  #9CCFDA;
+
+  --wins:         #14181D;
+  --closed:       #A2AAB4;
+  --unresolved:   #97711F;
+
+  --danger:       #CB3A2D;
+  --danger-dim:   #E6AFA9;
+  --tint-danger:  #FBECEA;
+
+  --tint-a:       #FAF0E5;
+  --tint-b:       #E6F3F6;
+  --tint-signal:  #EAF1FD;
+
+  --glass-field:  rgba(255, 255, 255, 0.68);
+  --glass-raised: rgba(255, 255, 255, 0.82);
+
+  --shadow-panel: 0 1px 2px rgba(16, 24, 40, 0.06), 0 0 0 1px var(--seam);
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -161,7 +220,7 @@ a:hover { text-decoration: underline; }
     border-color var(--dur-fast) var(--ease-instrument);
 }
 .btn-primary { background: var(--signal); color: var(--signal-ink); }
-.btn-primary:hover { background: #6E99F2; }
+.btn-primary:hover { background: var(--signal-hover); }
 .btn-primary:disabled { background: var(--seam-bright); color: var(--read-faint); cursor: not-allowed; }
 .btn-secondary {
   background: transparent;
