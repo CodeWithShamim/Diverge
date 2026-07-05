@@ -59,7 +59,7 @@
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
-html { background: var(--field); }
+html, body { height: 100%; background: var(--field); }
 
 body {
   font-family: var(--font-display);
@@ -69,6 +69,18 @@ body {
   background: var(--field);
   -webkit-font-smoothing: antialiased;
 }
+
+/* Sticky-footer column: the app shell fills at least the viewport and <main>
+   takes the slack, so the footer sits at the bottom on short pages instead of
+   floating up. 100vh is viewport-relative, so this holds under any provider
+   wrappers Privy/Router mount above it. */
+.app-shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+.app-shell > main { flex: 1 0 auto; }
+.app-shell > .ftr { flex-shrink: 0; }
 
 /* Type scale (1.250, base 16) */
 .t-hero  { font: 700 49px/56px var(--font-display); letter-spacing: -1px; }

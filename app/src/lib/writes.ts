@@ -31,12 +31,17 @@ async function realWrite(
   try {
     const client = await getWriteClient(provider);
     onProgress({ state: "submitted" });
+    // genlayer-js reads `account.address` off whatever it's handed and does NOT
+    // normalize a bare address string (viem only does that at client creation).
+    // So wrap the wallet address as a viem JSON-RPC account: it carries `.address`
+    // and, being type !== "local", routes signing through the wallet provider's
+    // eth_sendTransaction rather than a local signTransaction.
     const hash = await client.writeContract({
       address,
       functionName,
       args,
       value,
-      account,
+      account: { address: account as `0x${string}`, type: "json-rpc" as const },
     });
     onProgress({ state: "pending", hash });
     const receipt = await client.waitForTransactionReceipt({

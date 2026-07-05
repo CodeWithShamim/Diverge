@@ -19,6 +19,53 @@ export const ADDRESSES = {
   appeals: import.meta.env.VITE_ADDR_APPEALS ?? "",
 } as const;
 
+/** GenLayer Studio block explorer. Addresses resolve at /address/{addr}. */
+export const EXPLORER_BASE = "https://explorer-studio.genlayer.com";
+export const explorerAddressUrl = (addr: string) =>
+  `${EXPLORER_BASE}/address/${addr}`;
+
+/** The five on-chain contracts, in dependency order. `key` maps into ADDRESSES;
+ *  `source` is the contract file; `role` is the one-line responsibility (§ PRD). */
+export type ContractKey = keyof typeof ADDRESSES;
+export interface ContractInfo {
+  key: ContractKey;
+  name: string;
+  source: string;
+  role: string;
+}
+export const CONTRACTS: ContractInfo[] = [
+  {
+    key: "registry",
+    name: "DisputeRegistry",
+    source: "dispute_registry.py",
+    role: "Lifecycle & snapshot pinning — ASSERTED → CHALLENGED → … → FINAL",
+  },
+  {
+    key: "arbiter",
+    name: "Diverge",
+    source: "diverge.py",
+    role: "Non-deterministic core — decomposition, order normalization, validator equivalence",
+  },
+  {
+    key: "vault",
+    name: "StakeVault",
+    source: "stake_vault.py",
+    role: "Bonds — winner-takes-loser, 2% fee, appeal-bond settlement",
+  },
+  {
+    key: "log",
+    name: "ResolutionLog",
+    source: "resolution_log.py",
+    role: "The product surface — get_resolution / is_final for any consuming contract",
+  },
+  {
+    key: "appeals",
+    name: "AppealManager",
+    source: "appeal_manager.py",
+    role: "Bonded appeals (50%), re-adjudication, finality",
+  },
+];
+
 /** Mock mode: explicit VITE_MOCK=1, or no registry address configured. */
 export const MOCK_MODE =
   import.meta.env.VITE_MOCK === "1" || ADDRESSES.registry === "";
