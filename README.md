@@ -15,19 +15,22 @@ Built against the [PRD](../Diverge_PRD.md) and
 ## Layout
 
 ```
-contracts/                 # GenLayer Intelligent Contracts (Python, SDK v0.3 namespace)
+contracts/                 # GenLayer Intelligent Contracts (Python, GenVM v0.2.16 SDK — `from genlayer import *`)
   dispute_registry.py      #   lifecycle: ASSERTED → CHALLENGED → … → FINAL; snapshot pinning
-  diverge.py          #   the non-deterministic core (FR-2): decomposition,
+  diverge.py               #   the non-deterministic core (FR-2): decomposition,
                            #   order normalization, custom leader/validator equivalence
   stake_vault.py           #   bonds, winner-takes-loser, 2% fee, appeal-bond settlement
   resolution_log.py        #   the product surface: get_resolution / is_final
   appeal_manager.py        #   bonded appeals (50%), re-adjudication, finality
   mock_optimistic_oracle.py#   M6 consumer example — settles its own game on a verdict
 scripts/deploy.sh          # deploy + wire + schema generation (studionet | bradbury)
+scripts/seed.mjs           # seed demo disputes via genlayer-js
 tests/
   mocks/genlayer/          # mock of the GenLayer SDK — contracts run under plain pytest
   direct/                  # 89 direct tests (state, money, order-swap, injection, taxonomy)
 app/                       # the dApp — React + Vite + genlayer-js + R3F + GSAP + Lenis
+  src/views/Docs.tsx       #   in-app protocol reference (also linked from the footer)
+  src/components/Footer.tsx#   contract directory — every deploy links to the Studio explorer
 ```
 
 ## The core engineering thesis (PRD §1.4)
@@ -58,6 +61,24 @@ judgment and is order-sensitive. The design answers both:
    delimiters, and LLM output crosses the determinism boundary exactly once
    through a whitelist sanitizer (10-variant adversarial set in tests).
 
+## Deployed contracts (StudioNet)
+
+Live on **GenLayer StudioNet** (chain `61999`). Every address is browsable on the
+[GenLayer Studio explorer](https://explorer-studio.genlayer.com/) — the same
+links the dApp's footer and `/docs` page surface. Deployer
+`0xf8ae4d1f93526d2b31804f65e81286d631f95164`.
+
+| Contract          | Source                 | Address                                      | Explorer                                                                                              |
+| ----------------- | ---------------------- | -------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `DisputeRegistry` | `dispute_registry.py`  | `0xd0BB5Dd4d4292074125fa5e7545b382c3bEE44D0` | [view ↗](https://explorer-studio.genlayer.com/address/0xd0BB5Dd4d4292074125fa5e7545b382c3bEE44D0) |
+| `Diverge`         | `diverge.py`           | `0x34951D1F98eb2b44a9835129a29F85a89120E67f` | [view ↗](https://explorer-studio.genlayer.com/address/0x34951D1F98eb2b44a9835129a29F85a89120E67f) |
+| `StakeVault`      | `stake_vault.py`       | `0xC54328bCd9bA36A98684B275b4070faCEd0F3673` | [view ↗](https://explorer-studio.genlayer.com/address/0xC54328bCd9bA36A98684B275b4070faCEd0F3673) |
+| `ResolutionLog`   | `resolution_log.py`    | `0x9885b9CA5b065aCb1AE693D00038aCCb5D15c728` | [view ↗](https://explorer-studio.genlayer.com/address/0x9885b9CA5b065aCb1AE693D00038aCCb5D15c728) |
+| `AppealManager`   | `appeal_manager.py`    | `0x5f81A630c3D8129419eaF6688FC78dfD90CB106A` | [view ↗](https://explorer-studio.genlayer.com/address/0x5f81A630c3D8129419eaF6688FC78dfD90CB106A) |
+
+`ResolutionLog` is the public read surface — any contract calls `is_final` /
+`get_resolution` on it (see `mock_optimistic_oracle.py`).
+
 ## Run the tests
 
 ```bash
@@ -76,7 +97,12 @@ cd app && npm install && npm run dev
 ```
 
 Diverge targets **GenLayer StudioNet** (chain `61999`, `https://studio.genlayer.com/api`)
-— the hosted, gasless studio network — and nothing else.
+— the hosted, gasless studio network — and nothing else. The five contracts are
+already deployed (see [Deployed contracts](#deployed-contracts-studionet)); copy
+`.env.example` → `app/.env.local` with the `VITE_ADDR_*` values and `VITE_MOCK=0`
+to run against the live deployment. The in-app **Docs** page (`/#/docs`) and the
+site **footer** list every contract with a one-click link to the GenLayer Studio
+explorer.
 
 **Wallet connect (Privy).** Set `VITE_PRIVY_APP_ID` (from
 [dashboard.privy.io](https://dashboard.privy.io)) in `app/.env.local` to enable
@@ -85,8 +111,8 @@ external EVM wallet. The connected wallet's EIP-1193 provider is bridged into
 `genlayer-js` as the transaction signer; every write is signed by it. Without
 an app id the button shows a hint and the rest of the app still runs.
 
-With no contract addresses configured the app runs on a built-in **mock adapter**
-(header shows `SIMULATED`) — the full UX is explorable without a deploy: board,
+With no contract addresses configured the app falls back to a built-in **mock
+adapter** (header shows `SIMULATED`) — the full UX is explorable without a deploy: board,
 bilateral dispute detail, assert/challenge/appeal flows with the complete tx
 state ladder (submitted → pending → accepted → finalized / soft-error), the
 sub-question resolution ceremony, and the Divergence verdict scene (R3F, with a
@@ -110,18 +136,17 @@ Debug loop: `genlayer receipt <txHash> --stdout --stderr` before touching code.
 | M1  | Core contracts                              | ✅ written, direct tests green                     |
 | M2  | Arbiter (order-swap + injection + taxonomy) | ✅ written + tested (mocked)                       |
 | M3  | Consensus proof (gltest on StudioNet)       | ⏳ requires `gltest` + network                     |
-| M4  | StudioNet deploy                            | ⏳ `scripts/deploy.sh studionet` (gasless)         |
-| M5  | dApp per FR-7 + Design System + Privy wallet | ✅ built; runs on mock adapter until M4            |
+| M4  | StudioNet deploy                            | ✅ all 5 contracts deployed + wired (chain 61999) |
+| M5  | dApp per FR-7 + Design System + Privy wallet | ✅ built; live on the StudioNet deployment         |
 | M6  | Consumer example                            | ✅ `mock_optimistic_oracle.py` + tests             |
 | M7  | Submission                                  | ⏳ portal + demo video                             |
 
-Known items to verify on-network (flagged `# VERIFY:` in code):
+Resolved during the StudioNet deploy: the runner `Depends` header is pinned to
+GenVM **v0.2.16** (version line + pinned `py-genlayer` hash) and schemas are
+committed under `app/src/config/schemas/`. Remaining items to verify on-network:
 
-- The pinned `py-genlayer` runner hash in each contract's `Depends` header —
-  check `genlayer runners list` for the target GenVM.
 - `genlayer-js` StudioNet receipt shape in `app/src/lib/writes.ts`, and whether
-  the first wallet-signed write needs `client.connect()`; regenerate schemas
-  with `genlayer schema` after deploy.
+  the first wallet-signed write needs `client.connect()`.
 - Privy → `genlayer-js` signer bridge (`app/src/lib/client.ts`): the wallet's
   EIP-1193 provider is passed to `createClient({ provider })`. Confirm StudioNet
   transaction signing succeeds end-to-end with a real connected wallet.
