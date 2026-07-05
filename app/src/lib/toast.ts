@@ -49,10 +49,11 @@ export function push(t: Omit<Toast, "id">): number {
   return id;
 }
 
-/** Convenience raisers. Errors are sticky by default — a reverted transaction
- *  is not something to blink and miss. */
+/** Convenience raisers. Every toast auto-dismisses; errors get the longest
+ *  window (a reverted transaction is not something to blink and miss) but still
+ *  clear on their own. Any toast can be dismissed early by clicking it. */
 export const toast = {
-  error: (title: string, message?: string) => push({ kind: "error", title, message, ttl: 0 }),
+  error: (title: string, message?: string) => push({ kind: "error", title, message, ttl: 10000 }),
   warn: (title: string, message?: string) => push({ kind: "warn", title, message, ttl: 8000 }),
   info: (title: string, message?: string) => push({ kind: "info", title, message, ttl: 6000 }),
   success: (title: string, message?: string) =>

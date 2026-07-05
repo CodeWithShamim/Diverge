@@ -1,9 +1,30 @@
 /** Read layer — view calls only, never a wallet prompt (FR-7.3). */
 
 import { ADDRESSES, MOCK_MODE } from "../config/chain";
-import { mockGetBoard, mockGetDispute, mockGetResolution, mockGetVerdict } from "./mock";
-import type { Dispute, Resolution, Supports, SubResult, VerdictHydration } from "./types";
+import {
+  mockGetAppeal,
+  mockGetBoard,
+  mockGetDispute,
+  mockGetLock,
+  mockGetResolution,
+  mockGetRetryState,
+  mockGetVerdict,
+} from "./mock";
+import type {
+  Appeal,
+  Dispute,
+  Lock,
+  Resolution,
+  RetryState,
+  Supports,
+  SubResult,
+  VerdictHydration,
+  Winner,
+} from "./types";
 import { getReadClient } from "./client";
+
+const WINNER_NAMES: Winner[] = ["NONE", "A_WINS", "B_WINS", "UNRESOLVED"];
+const fromWei = (v: any) => Number(v) / 1e18;
 
 export async function getBoard(): Promise<Dispute[]> {
   if (MOCK_MODE) return mockGetBoard();
@@ -82,6 +103,74 @@ export async function getVerdict(
       subResults,
       confidence: raw.confidence ?? null,
       round: Number(raw.round),
+    };
+  } catch {
+    return undefined;
+  }
+}
+
+/** FR-4.2 — arbiter.get_retry_state. Never raises on-chain (returns zeros when
+ *  no retry is scheduled), so an empty state is the normal healthy case. */
+export async function getRetryState(id: number): Promise<RetryState | undefined> {
+  if (MOCK_MODE) return mockGetRetryState(id);
+  const client = await getReadClient();
+  try {
+    const raw = await client.readContract({
+      address: ADDRESSES.arbiter,
+      functionName: "get_retry_state",
+      args: [id],
+    });
+    return {
+      attempts: Number(raw.attempts),
+      lastError: String(raw.last_error ?? ""),
+      nextRetryAt: Number(raw.next_retry_at),
+    };
+  } catch {
+    return undefined;
+  }
+}
+
+/** FR-3 — vault.get_lock: escrowed bond breakdown. Raises "unknown dispute"
+ *  before any bond is locked, which we treat as "no lock yet". */
+export async function getLock(id: number): Promise<Lock | undefined> {
+  if (MOCK_MODE) return mockGetLock(id);
+  const client = await getReadClient();
+  try {
+    const raw = await client.readContract({
+      address: ADDRESSES.vault,
+      functionName: "get_lock",
+      args: [id],
+    });
+    return {
+      asserter: raw.asserter,
+      challenger: raw.challenger,
+      bondA: fromWei(raw.bond_a),
+      bondB: fromWei(raw.bond_b),
+      appellant: raw.appellant,
+      appealBond: fromWei(raw.appeal_bond),
+      settled: Boolean(raw.settled),
+    };
+  } catch {
+    return undefined;
+  }
+}
+
+/** FR-5 — appeals.get_appeal. Raises "no appeal" until a party appeals. */
+export async function getAppeal(id: number): Promise<Appeal | undefined> {
+  if (MOCK_MODE) return mockGetAppeal(id);
+  const client = await getReadClient();
+  try {
+    const raw = await client.readContract({
+      address: ADDRESSES.appeals,
+      functionName: "get_appeal",
+      args: [id],
+    });
+    return {
+      disputeId: Number(raw.dispute_id),
+      appellant: raw.appellant,
+      bond: fromWei(raw.bond),
+      preAppealWinner: WINNER_NAMES[Number(raw.pre_appeal_winner)] ?? "NONE",
+      createdAt: Number(raw.created_at),
     };
   } catch {
     return undefined;

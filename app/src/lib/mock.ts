@@ -3,8 +3,11 @@
  *  Same interface as lib/reads.ts + lib/writes.ts real paths. */
 
 import type {
+  Appeal,
   Dispute,
+  Lock,
   Resolution,
+  RetryState,
   SubResult,
   TxProgress,
   VerdictHydration,
@@ -237,6 +240,47 @@ export async function mockGetVerdict(id: number): Promise<VerdictHydration | und
   return { subResults: d.subResults, confidence: d.confidence, round: d.round };
 }
 
+/** FR-4.2 — the mock never simulates LLM failure, so retries stay empty (the
+ *  healthy path). Real StudioNet surfaces genuine EXTERNAL/TRANSIENT retries. */
+export async function mockGetRetryState(_id: number): Promise<RetryState | undefined> {
+  await wait(120);
+  return { attempts: 0, lastError: "", nextRetryAt: 0 };
+}
+
+/** Synthesize the vault lock from the dispute record — the mock has no separate
+ *  vault store, but bonds are fully derivable from status/round. */
+export async function mockGetLock(id: number): Promise<Lock | undefined> {
+  await wait(140);
+  const d = disputes.find((x) => x.id === id);
+  if (!d) return undefined;
+  const challenged = Boolean(d.claimB);
+  const appealed = d.round === 2 || d.status === "APPEALED";
+  return {
+    asserter: d.asserter,
+    challenger: challenged ? d.challenger : "",
+    bondA: d.bond,
+    bondB: challenged ? d.bond : 0,
+    appellant: appealed ? d.challenger : "",
+    appealBond: appealed ? d.bond / 2 : 0,
+    settled: d.status === "FINAL",
+  };
+}
+
+/** Synthesize the appeal record for disputes that reached a round-2 / APPEALED
+ *  state; undefined otherwise (mirrors the real "no appeal" raise). */
+export async function mockGetAppeal(id: number): Promise<Appeal | undefined> {
+  await wait(140);
+  const d = disputes.find((x) => x.id === id);
+  if (!d || (d.round !== 2 && d.status !== "APPEALED")) return undefined;
+  return {
+    disputeId: id,
+    appellant: d.challenger,
+    bond: d.bond / 2,
+    preAppealWinner: d.winner,
+    createdAt: (d.appealDeadline || now()) - 12 * H,
+  };
+}
+
 // ---- writes — every write walks the full FR-7.2 ladder --------------------------
 
 async function ladder(
@@ -348,6 +392,27 @@ export async function mockAppeal(id: number, onProgress: (p: TxProgress) => void
     d.status = "RESOLVED";
     d.round = 2;
     d.appealDeadline = 0;
+  });
+}
+
+export async function mockFinalizeUncontested(id: number, onProgress: (p: TxProgress) => void) {
+  await ladder(onProgress, () => {
+    const d = disputes.find((x) => x.id === id);
+    if (!d) return;
+    // FR-1.5 — unchallenged assertion stands: FINAL / A_WINS / uncontested.
+    d.status = "FINAL";
+    d.winner = "A_WINS";
+    d.uncontested = true;
+    resolutions.set(id, {
+      disputeId: id,
+      winner: "A_WINS",
+      unresolved: false,
+      uncontested: true,
+      supportsVector: "",
+      snapshotA: d.snapshotA,
+      snapshotB: "",
+      finalizedAt: now(),
+    });
   });
 }
 

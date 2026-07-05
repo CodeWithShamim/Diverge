@@ -1,10 +1,34 @@
 import { useEffect, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { getResolution } from '../lib/reads';
-import type { Resolution } from '../lib/types';
+import { Link, useSearchParams } from 'react-router-dom';
+import { getDispute, getResolution } from '../lib/reads';
+import type { Dispute, Resolution } from '../lib/types';
 import { ADDRESSES } from '../config/chain';
 import { Loader } from '../components/Loader';
 import { AuroraBackdrop } from '../components/AuroraBackdrop';
+
+/** Why a dispute has no resolution yet — the lifecycle step still pending, so the
+ *  explorer explains the gap instead of reading like a failed lookup. */
+function pendingReason(d: Dispute): string {
+  const now = Date.now() / 1000;
+  switch (d.status) {
+    case 'ASSERTED':
+      return d.challengeDeadline > now
+        ? 'still in its challenge window — unchallenged claims finalize only after it closes.'
+        : 'challenge window closed — call finalize_uncontested to publish the resolution.';
+    case 'CHALLENGED':
+      return 'challenged but not yet adjudicated — trigger Diverge.resolve, then finalize.';
+    case 'RESOLVING':
+      return 'adjudication in progress — a verdict is being reached.';
+    case 'RESOLVED':
+      return d.appealDeadline > now
+        ? 'has a verdict but its appeal window is still open — finalize once it closes.'
+        : 'has a verdict and its appeal window has closed — call finalize to publish the resolution.';
+    case 'APPEALED':
+      return 're-adjudicating under appeal — the round-2 verdict will be final.';
+    default:
+      return 'not finalized yet.';
+  }
+}
 
 /** Resolution explorer — for consuming-protocol devs (FR-7.1). Read-only:
  *  no primary buttons, no wallet prompts (§5.7). */
@@ -12,6 +36,7 @@ export function ResolutionExplorer() {
   const [params, setParams] = useSearchParams();
   const [query, setQuery] = useState(params.get('id') ?? '');
   const [result, setResult] = useState<Resolution | null | 'none'>(null);
+  const [pending, setPending] = useState<Dispute | null>(null);
   const [loading, setLoading] = useState(false);
 
   const lookup = async (idStr: string) => {
@@ -19,9 +44,13 @@ export function ResolutionExplorer() {
     if (Number.isNaN(id) || idStr === '') return;
     setParams({ id: idStr });
     setLoading(true);
+    setPending(null);
     try {
       const r = await getResolution(id);
       setResult(r ?? 'none');
+      // No finalized resolution — surface the dispute's live status so the gap
+      // reads as "not final yet", not "lookup failed".
+      if (!r) setPending((await getDispute(id)) ?? null);
     } finally {
       setLoading(false);
     }
@@ -69,8 +98,16 @@ if log.view().is_final(dispute_id):
 
       {!loading && result === 'none' && (
         <p className="notice">
-          No finalized resolution for that id. <span className="t-data">is_final == false</span> —
-          consuming protocols fall back to their own timeout.
+          No finalized resolution for that id. <span className="t-data">is_final == false</span>
+          {pending ? (
+            <>
+              {' '}— dispute №{String(pending.id).padStart(4, '0')} is{' '}
+              <span className="t-data">{pending.status}</span>: {pendingReason(pending)}{' '}
+              <Link to={`/dispute/${pending.id}`}>Open dispute →</Link>
+            </>
+          ) : (
+            <> — consuming protocols fall back to their own timeout.</>
+          )}
         </p>
       )}
 

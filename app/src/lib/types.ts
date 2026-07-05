@@ -60,6 +60,35 @@ export interface Resolution {
   finalizedAt: number;
 }
 
+/** FR-4.2 — arbiter.get_retry_state: the soft-error / retry taxonomy surfaced
+ *  so a stuck adjudication explains itself instead of looking hung. */
+export interface RetryState {
+  attempts: number;
+  lastError: string;
+  nextRetryAt: number; // epoch secs; 0 = no retry scheduled
+}
+
+/** FR-3 — vault.get_lock: the escrowed bond breakdown for a dispute. */
+export interface Lock {
+  asserter: string;
+  challenger: string;
+  bondA: number; // GEN
+  bondB: number; // GEN
+  appellant: string;
+  appealBond: number; // GEN
+  settled: boolean;
+}
+
+/** FR-5 — appeals.get_appeal: who appealed, the 50% bond, and the pre-appeal
+ *  winner used for flip detection at settlement. */
+export interface Appeal {
+  disputeId: number;
+  appellant: string;
+  bond: number; // GEN
+  preAppealWinner: Winner;
+  createdAt: number;
+}
+
 /** FR-7.2 — the full transaction state ladder, never a toast. */
 export type TxState =
   | "idle"

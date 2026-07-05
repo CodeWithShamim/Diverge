@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { getDispute, getVerdict } from "../lib/reads";
-import { resolve, finalize } from "../lib/writes";
-import type { Dispute, Supports, TxProgress } from "../lib/types";
+import { getAppeal, getDispute, getLock, getRetryState, getVerdict } from "../lib/reads";
+import { finalize, finalizeUncontested, resolve } from "../lib/writes";
+import type { Appeal, Dispute, Lock, RetryState, Supports, TxProgress } from "../lib/types";
 import { StatusChip } from "../components/StatusChip";
 import { ClaimPanel } from "../components/ClaimPanel";
 import { SubQuestionBridge } from "../components/SubQuestionBridge";
@@ -17,6 +17,9 @@ import { revealDispute } from "../design/motion";
 export function DisputeDetail() {
   const { id } = useParams();
   const [dispute, setDispute] = useState<Dispute | null>(null);
+  const [lock, setLock] = useState<Lock | undefined>();
+  const [appeal, setAppeal] = useState<Appeal | undefined>();
+  const [retry, setRetry] = useState<RetryState | undefined>();
   const [tx, setTx] = useState<TxProgress>({ state: "idle" });
   const [ceremony, setCeremony] = useState(false);
   const seamRef = useRef<HTMLDivElement>(null);
@@ -41,6 +44,16 @@ export function DisputeDetail() {
         }
       }
       setDispute(d);
+
+      // FR-3 / FR-4.2 / FR-5 — the escrow ledger, retry taxonomy, and appeal
+      // record are independent view calls; render them as they resolve.
+      getLock(d.id).then(setLock);
+      getAppeal(d.id).then(setAppeal);
+      if (d.status === "CHALLENGED" || d.status === "RESOLVING") {
+        getRetryState(d.id).then(setRetry);
+      } else {
+        setRetry(undefined);
+      }
     });
   }, [id]);
 
@@ -76,6 +89,10 @@ export function DisputeDetail() {
     dispute.round < 2 &&
     dispute.appealDeadline * 1000 > Date.now();
   const appealBond = dispute.bond / 2;
+  // FR-1.5 — challenge window elapsed with no challenger: the assertion can stand.
+  const challengeClosed =
+    dispute.status === "ASSERTED" && dispute.challengeDeadline * 1000 <= Date.now();
+  const busy = tx.state !== "idle" && tx.state !== "finalized";
 
   const onResolve = async () => {
     await resolve(dispute.id, setTx);
@@ -84,6 +101,10 @@ export function DisputeDetail() {
   };
   const onFinalize = async () => {
     await finalize(dispute.id, setTx);
+    load();
+  };
+  const onFinalizeUncontested = async () => {
+    await finalizeUncontested(dispute.id, setTx);
     load();
   };
 
@@ -102,6 +123,28 @@ export function DisputeDetail() {
         <p className="notice">
           Unchallenged assertion — stood by default after the challenge window.
           Logged as <span className="t-data">A_WINS (uncontested)</span>.
+        </p>
+      )}
+
+      {challengeClosed && (
+        <p className="notice">
+          Challenge window closed with no challenger. Finalize to stand the
+          assertion as <span className="t-data">A_WINS (uncontested)</span> and
+          release the bond in full — no fee.
+        </p>
+      )}
+
+      {retry && retry.attempts > 0 && (
+        <p className="notice unresolved-notice">
+          Adjudication hit a{" "}
+          <span className="t-data">{retry.lastError.split(":")[0] || "transient"}</span>{" "}
+          error — retry {retry.attempts}/2 scheduled
+          {retry.nextRetryAt > 0 && (
+            <> for <span className="t-data">
+              {new Date(retry.nextRetryAt * 1000).toLocaleString()}
+            </span></>
+          )}
+          . Bonds stay escrowed until a verdict or exhaustion.
         </p>
       )}
 
@@ -153,17 +196,52 @@ export function DisputeDetail() {
         </>
       )}
 
+      {lock && (
+        <>
+          <div className="seam-rule">
+            <span className="t-label">SETTLEMENT LEDGER</span>
+          </div>
+          <dl className="kv">
+            <dt>asserter bond</dt>
+            <dd>{lock.bondA.toFixed(1)} GEN</dd>
+            <dt>challenger bond</dt>
+            <dd>{lock.bondB > 0 ? `${lock.bondB.toFixed(1)} GEN` : "—"}</dd>
+            {(appeal || lock.appealBond > 0) && (
+              <>
+                <dt>appeal bond</dt>
+                <dd>{lock.appealBond.toFixed(1)} GEN</dd>
+              </>
+            )}
+            {appeal && (
+              <>
+                <dt>appellant</dt>
+                <dd>{appeal.appellant}</dd>
+                <dt>pre-appeal winner</dt>
+                <dd>{appeal.preAppealWinner}</dd>
+              </>
+            )}
+            <dt>escrow status</dt>
+            <dd>{lock.settled ? "settled — paid out" : "locked"}</dd>
+          </dl>
+        </>
+      )}
+
       <div className="seam-rule">
         <span className="t-label">ACTIONS</span>
       </div>
       <div className="actions-bar">
-        {dispute.status === "ASSERTED" && (
+        {dispute.status === "ASSERTED" && !challengeClosed && (
           <Link to={`/challenge/${dispute.id}`} className="btn btn-primary">
             Challenge · match {dispute.bond.toFixed(1)} GEN
           </Link>
         )}
+        {challengeClosed && (
+          <button className="btn btn-primary" onClick={onFinalizeUncontested} disabled={busy}>
+            Finalize uncontested · release {dispute.bond.toFixed(1)} GEN
+          </button>
+        )}
         {dispute.status === "CHALLENGED" && (
-          <button className="btn btn-primary" onClick={onResolve} disabled={tx.state !== "idle" && tx.state !== "finalized"}>
+          <button className="btn btn-primary" onClick={onResolve} disabled={busy}>
             Resolve · trigger adjudication
           </button>
         )}
@@ -173,7 +251,7 @@ export function DisputeDetail() {
           </Link>
         )}
         {dispute.status === "RESOLVED" && (!appealOpen || dispute.round === 2) && (
-          <button className="btn btn-primary" onClick={onFinalize} disabled={tx.state !== "idle" && tx.state !== "finalized"}>
+          <button className="btn btn-primary" onClick={onFinalize} disabled={busy}>
             Finalize · settle bonds
           </button>
         )}

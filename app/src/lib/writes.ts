@@ -7,6 +7,7 @@ import {
   mockAssertClaim,
   mockChallenge,
   mockFinalize,
+  mockFinalizeUncontested,
   mockResolve,
 } from "./mock";
 import type { TxProgress } from "./types";
@@ -129,4 +130,11 @@ export async function appeal(id: number, bondGen: number, onProgress: OnProgress
 export async function finalize(id: number, onProgress: OnProgress) {
   if (MOCK_MODE) return mockFinalize(id, onProgress);
   return realWrite(ADDRESSES.registry, "finalize", [id], 0n, onProgress);
+}
+
+/** FR-1.5 — settle an unchallenged assertion after the challenge window closes:
+ *  the claim stands (A_WINS / uncontested) and the bond is released in full. */
+export async function finalizeUncontested(id: number, onProgress: OnProgress) {
+  if (MOCK_MODE) return mockFinalizeUncontested(id, onProgress);
+  return realWrite(ADDRESSES.registry, "finalize_uncontested", [id], 0n, onProgress);
 }
