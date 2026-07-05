@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { HashRouter, NavLink, Route, Routes } from "react-router-dom";
+import { Landing } from "./views/Landing";
 import { Board } from "./views/Board";
 import { DisputeDetail } from "./views/DisputeDetail";
 import { Assert } from "./views/Assert";
@@ -27,7 +28,7 @@ export default function App() {
             DIVERGE<span className="fork-glyph">⟋⟍</span>
           </NavLink>
           <nav aria-label="Primary">
-            <NavLink to="/" end className={({ isActive }) => (isActive ? "active" : "")}>
+            <NavLink to="/board" className={({ isActive }) => (isActive ? "active" : "")}>
               Board
             </NavLink>
             <NavLink to="/assert" className={({ isActive }) => (isActive ? "active" : "")}>
@@ -49,7 +50,8 @@ export default function App() {
       </header>
       <main>
         <Routes>
-          <Route path="/" element={<Board />} />
+          <Route path="/" element={<Landing />} />
+          <Route path="/board" element={<Board />} />
           <Route path="/dispute/:id" element={<DisputeDetail />} />
           <Route path="/assert" element={<Assert />} />
           <Route path="/challenge/:id" element={<Challenge />} />

@@ -33,6 +33,10 @@
   padding: 3px 8px;
 }
 .hdr-chain .mock-flag { color: var(--unresolved); }
+@media (max-width: 720px) {
+  .hdr-inner { flex-wrap: wrap; gap: var(--s-3) var(--s-4); }
+  .hdr nav { flex: 1 1 100%; order: 3; }
+}
 
 /* ---- wallet control (Privy) ------------------------------------------------ */
 .wallet-connect { padding: 6px var(--s-3); font-size: 14px; }

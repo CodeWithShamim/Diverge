@@ -33,7 +33,8 @@ export function Footer() {
 
         <nav className="ftr-links" aria-label="Site">
           <span className="t-label">Diverge</span>
-          <Link to="/">Board</Link>
+          <Link to="/">Home</Link>
+          <Link to="/board">Board</Link>
           <Link to="/assert">Assert a claim</Link>
           <Link to="/explorer">Resolution explorer</Link>
           <Link to="/docs">Docs</Link>
