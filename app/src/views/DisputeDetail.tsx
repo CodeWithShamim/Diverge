@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { getDispute } from "../lib/reads";
+import { getDispute, getVerdict } from "../lib/reads";
 import { resolve, finalize } from "../lib/writes";
 import type { Dispute, Supports, TxProgress } from "../lib/types";
 import { StatusChip } from "../components/StatusChip";
@@ -23,7 +23,24 @@ export function DisputeDetail() {
   const sideBRef = useRef<HTMLDivElement>(null);
 
   const load = useCallback(() => {
-    getDispute(Number(id)).then((d) => setDispute(d ?? null));
+    getDispute(Number(id)).then(async (d) => {
+      if (!d) {
+        setDispute(null);
+        return;
+      }
+      // FR-2.3 — the registry knows the winner; per-sub-question supports +
+      // reasons + confidence live in the arbiter. Hydrate them once a verdict
+      // exists so the sub-question ceremony and Divergence scene render against
+      // the real contract exactly as they do under the mock adapter.
+      if (d.winner !== "NONE" && d.subResults === null) {
+        const v = await getVerdict(d.id, d.subQuestions);
+        if (v) {
+          d.subResults = v.subResults;
+          d.confidence = v.confidence;
+        }
+      }
+      setDispute(d);
+    });
   }, [id]);
 
   useEffect(load, [load]);
