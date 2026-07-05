@@ -3,8 +3,18 @@
    the poster does not. */
 
 .landing {
+  position: relative;
   overflow-x: clip;
 }
+
+/* Home page carries BOTH fields in one canvas (assert streams + explorer scan).
+   It's an absolute layer filling .landing at z-index 0 — the same reliable
+   pattern as the Assert/Explorer views (a negative or fixed layer gets hidden
+   by the opaque body fill / overflow:clip). Every section is lifted to z-index 1
+   above it; the opaque hero covers it in its own viewport, so the 3D scene is
+   untouched and the field reads through the transparent sections below. */
+.landing-backdrop { position: absolute; z-index: 0; }
+.landing > section { position: relative; z-index: 1; }
 
 /* The hero headline gradients are tuned for darkness (white/pale highlights).
    In light theme they'd wash out, so re-tune the stops to darker, saturated

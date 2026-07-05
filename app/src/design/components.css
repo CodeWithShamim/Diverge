@@ -292,6 +292,34 @@
 .notice { font: 400 14px/22px var(--font-display); color: var(--read-muted); border-left: 2px solid var(--seam-bright); padding-left: var(--s-3); }
 .notice.unresolved-notice { border-left-color: var(--unresolved); }
 
+/* ---- living backdrop: per-view ambient field (Assert + Explorer only) --------
+   Only these two views wrap their content in .view-stage. The backdrop is an
+   absolute layer filling the stage at z-index 0; the content rides directly on
+   top at z-index 1 (NOT a negative z-index, which the opaque body fill would
+   hide). Weighted right, fading left so the form/text stay legible. */
+.view-stage { position: relative; overflow: hidden; min-height: 84vh; }
+.view-stage > .shell { position: relative; z-index: 1; }
+
+.view-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  -webkit-mask-image: linear-gradient(to right, transparent 0%, rgba(0,0,0,0.12) 30%, #000 72%);
+  mask-image: linear-gradient(to right, transparent 0%, rgba(0,0,0,0.12) 30%, #000 72%);
+}
+.view-backdrop canvas { display: block; width: 100%; height: 100%; }
+
+@media (max-width: 900px) {
+  /* Narrow: content spans full width, so wash the whole field evenly and faint
+     rather than hiding it behind a left mask. */
+  .view-backdrop {
+    opacity: 0.55;
+    -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 38%);
+    mask-image: linear-gradient(to bottom, transparent 0%, #000 38%);
+  }
+}
+
 /* ---- footer --------------------------------------------------------------- */
 .ftr {
   border-top: 1px solid var(--seam);

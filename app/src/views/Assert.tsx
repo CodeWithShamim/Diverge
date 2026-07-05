@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { MIN_BOND_GEN, TOKEN } from "../config/chain";
 import { assertClaim } from "../lib/writes";
 import { TxLadder } from "../components/TxLadder";
+import { AuroraBackdrop } from "../components/AuroraBackdrop";
 import type { TxProgress } from "../lib/types";
 
 /** Assert flow — FR-1.1/1.2. Sub-questions are declared here so both sides
@@ -27,7 +28,9 @@ export function Assert() {
   };
 
   return (
-    <div className="shell">
+    <div className="view-stage">
+      <AuroraBackdrop variant="assert" />
+      <div className="shell">
       <h1 className="t-h1 view-title">Assert a claim</h1>
       <p className="t-small" style={{ maxWidth: 640 }}>
         Posting opens a challenge window. If unchallenged, the assertion stands
@@ -118,6 +121,7 @@ export function Assert() {
           </button>
         </div>
         <TxLadder progress={tx} />
+      </div>
       </div>
     </div>
   );

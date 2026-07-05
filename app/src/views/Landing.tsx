@@ -7,6 +7,7 @@ import { Link } from "react-router-dom";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { HeroScene } from "../components/landing/HeroScene";
+import { AuroraBackdrop } from "../components/AuroraBackdrop";
 import { CHAIN_ID, CHAIN_NAME } from "../config/chain";
 import { prefersReducedMotion } from "../design/motion";
 import "../design/landing.css";
@@ -307,6 +308,8 @@ export function Landing() {
 
   return (
     <div className="landing" ref={root}>
+      {/* Both fields in one canvas (streams + scan) behind every section. */}
+      <AuroraBackdrop variant="both" className="landing-backdrop" />
       {/* ---------------- hero ---------------- */}
       <section className="hero">
         <div className="hero-canvas">

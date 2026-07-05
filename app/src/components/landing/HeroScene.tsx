@@ -10,14 +10,7 @@
  *  instrument remounts on theme change so every material picks up the new
  *  blending mode cleanly. */
 
-import {
-  createContext,
-  useContext,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react';
+import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { prefersReducedMotion } from '../../design/motion';
@@ -93,9 +86,7 @@ const usePalette = () => useContext(PaletteCtx);
 /** Tracks <html data-theme> so the scene follows the theme toggle live. */
 function useThemeName(): ThemeName {
   const read = (): ThemeName =>
-    document.documentElement.getAttribute('data-theme') === 'light'
-      ? 'light'
-      : 'dark';
+    document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
   const [name, setName] = useState<ThemeName>(read);
   useEffect(() => {
     const el = document.documentElement;
@@ -127,13 +118,13 @@ function forkCurve(dir: 1 | -1): THREE.CubicBezierCurve3 {
     new THREE.Vector3(0, 1.35, 0),
     new THREE.Vector3(0, 0.35, 0.25),
     new THREE.Vector3(dir * 1.25, -0.15, -0.15),
-    new THREE.Vector3(dir * 3.4, -1.7, -0.9)
+    new THREE.Vector3(dir * 3.4, -1.7, -0.9),
   );
 }
 
 const stemCurve = new THREE.LineCurve3(
   new THREE.Vector3(0, 3.4, -0.4),
-  new THREE.Vector3(0, 1.35, 0)
+  new THREE.Vector3(0, 1.35, 0),
 );
 
 /** One glowing path: bright core tube + wide halo tube, gently breathing. */
@@ -201,10 +192,7 @@ function FlowParticles({
     g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(count * 3), 3));
     return g;
   }, [count]);
-  const offsets = useMemo(
-    () => Array.from({ length: count }, () => Math.random()),
-    [count]
-  );
+  const offsets = useMemo(() => Array.from({ length: count }, () => Math.random()), [count]);
 
   useFrame(({ clock }) => {
     const pos = geo.attributes.position as THREE.BufferAttribute;
@@ -305,7 +293,7 @@ function Validators({ glow }: { glow: THREE.Texture }) {
         vy: -0.2 - (i % 3) * 0.35,
         speed: 0.25 + (i % 5) * 0.06,
       })),
-    []
+    [],
   );
 
   useFrame(({ clock }) => {
@@ -315,7 +303,7 @@ function Validators({ glow }: { glow: THREE.Texture }) {
       m.position.set(
         Math.cos(t * s.speed + s.phase) * s.r,
         s.vy + Math.sin(t * 0.8 + s.phase * 3) * 0.18,
-        Math.sin(t * s.speed + s.phase) * s.r * 0.5 - 0.4
+        Math.sin(t * s.speed + s.phase) * s.r * 0.5 - 0.4,
       );
     });
   });

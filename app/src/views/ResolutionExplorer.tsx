@@ -4,6 +4,7 @@ import { getResolution } from '../lib/reads';
 import type { Resolution } from '../lib/types';
 import { ADDRESSES } from '../config/chain';
 import { Loader } from '../components/Loader';
+import { AuroraBackdrop } from '../components/AuroraBackdrop';
 
 /** Resolution explorer — for consuming-protocol devs (FR-7.1). Read-only:
  *  no primary buttons, no wallet prompts (§5.7). */
@@ -40,7 +41,9 @@ if log.view().is_final(dispute_id):
     # r["unresolved"] is explicit — never mistake it for a verdict`;
 
   return (
-    <div className="shell">
+    <div className="view-stage">
+      <AuroraBackdrop variant="explorer" />
+      <div className="shell">
       <h1 className="t-h1 view-title">Resolution explorer</h1>
       <p className="t-small" style={{ maxWidth: 640 }}>
         The product surface: finalized verdicts, queryable by any contract in one view call. Reads
@@ -104,6 +107,7 @@ if log.view().is_final(dispute_id):
         <pre className="explorer-result" style={{ padding: 16, overflowX: 'auto' }}>
           <code className="t-data">{snippet}</code>
         </pre>
+      </div>
       </div>
     </div>
   );
