@@ -64,11 +64,29 @@ class _Proxy:
         _state.transfers.append((f"{self._inst._mock_address:x}", value))
 
 
+class _EOAProxy:
+    """Bare account: value transfers work, method calls don't (as on-chain)."""
+
+    def __init__(self, address: Address):
+        self._address = address
+
+    def view(self, **kwargs):
+        raise RuntimeError(f"mock: no contract deployed at {self._address:x}")
+
+    def emit(self, **kwargs):
+        raise RuntimeError(f"mock: no contract deployed at {self._address:x}")
+
+    def emit_transfer(self, *, value, on="finalized"):
+        if value <= 0:
+            raise ValueError("value must be greater than 0 for emit_transfer")
+        _state.transfers.append((f"{self._address:x}".lower(), value))
+
+
 def get_at(address: Address) -> _Proxy:
     key = f"{address:x}".lower()
     inst = _state.deployed.get(key)
     if inst is None:
-        raise RuntimeError(f"mock: no contract deployed at {key}")
+        return _EOAProxy(address)
     return _Proxy(inst)
 
 
