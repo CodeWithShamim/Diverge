@@ -1027,7 +1027,8 @@
 .final-cta .hero-ctas { pointer-events: auto; }
 
 /* ---- reveal defaults (GSAP drives these; visible without JS) ------------------ */
-[data-reveal] { will-change: transform, opacity; }
+/* No persistent will-change: GSAP promotes each section only while its reveal
+   tween runs, so we don't keep every full-width section as a live GPU layer. */
 
 /* ---- responsive ---------------------------------------------------------------- */
 @media (max-width: 960px) {

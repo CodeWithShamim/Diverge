@@ -1,4 +1,3 @@
-import { useEffect } from "react";
 import { HashRouter, NavLink, Route, Routes } from "react-router-dom";
 import { Landing } from "./views/Landing";
 import { Board } from "./views/Board";
@@ -8,7 +7,6 @@ import { Challenge } from "./views/Challenge";
 import { Appeal } from "./views/Appeal";
 import { ResolutionExplorer } from "./views/ResolutionExplorer";
 import { Docs } from "./views/Docs";
-import { initLenis } from "./design/motion";
 import { CHAIN_ID, CHAIN_NAME, MOCK_MODE } from "./config/chain";
 import { WalletControl } from "./components/WalletButton";
 import { ThemeToggle } from "./components/ThemeToggle";
@@ -17,10 +15,6 @@ import { Toaster } from "./components/Toaster";
 import { RouteTransition } from "./components/RouteTransition";
 
 export default function App() {
-  useEffect(() => {
-    initLenis();
-  }, []);
-
   return (
     <HashRouter>
       <div className="app-shell">

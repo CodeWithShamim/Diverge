@@ -3,7 +3,6 @@
  *  in ONE call and animates them identically. */
 
 import gsap from "gsap";
-import Lenis from "lenis";
 
 export const EASE_INSTRUMENT = "cubic-bezier(0.22, 1, 0.36, 1)";
 export const EASE_SNAP = "cubic-bezier(0.7, 0, 0.3, 1)";
@@ -20,18 +19,6 @@ export function prefersReducedMotion(): boolean {
     typeof window !== "undefined" &&
     window.matchMedia("(prefers-reduced-motion: reduce)").matches
   );
-}
-
-let lenis: Lenis | null = null;
-
-export function initLenis() {
-  if (lenis || prefersReducedMotion()) return;
-  lenis = new Lenis({ lerp: 0.1 }); // no scroll-jacking, no pinning
-  const raf = (time: number) => {
-    lenis?.raf(time);
-    requestAnimationFrame(raf);
-  };
-  requestAnimationFrame(raf);
 }
 
 /** Page load: seam draws top→bottom, then BOTH claim panels fade in

@@ -34,10 +34,15 @@ const env = {
 const ADDR = {
   registry: env.VITE_ADDR_REGISTRY,
   arbiter: env.VITE_ADDR_ARBITER,
+  vault: env.VITE_ADDR_VAULT,
+  log: env.VITE_ADDR_LOG,
+  appeals: env.VITE_ADDR_APPEALS,
 };
-if (!ADDR.registry || !ADDR.arbiter) {
-  console.error("VITE_ADDR_* missing from app/.env.local — deploy first");
-  process.exit(1);
+for (const k of ["registry", "arbiter", "vault", "log", "appeals"]) {
+  if (!ADDR[k]) {
+    console.error(`VITE_ADDR_${k.toUpperCase()} missing from app/.env.local — deploy first`);
+    process.exit(1);
+  }
 }
 
 // -- clients ------------------------------------------------------------------
@@ -109,6 +114,13 @@ async function write(client, address, functionName, args, valueGen = 0) {
 const read = (fn, args) =>
   asDeployer.readContract({ address: ADDR.registry, functionName: fn, args });
 
+const readAt = (address, fn, args) =>
+  asDeployer.readContract({ address, functionName: fn, args });
+
+// `node scripts/seed.mjs finalize` finalizes ripe disputes only (no new seeding)
+// — the tomorrow-run that populates ResolutionLog once the 24h windows close.
+const FINALIZE_ONLY = process.argv[2] === "finalize";
+
 // -- simulated content ----------------------------------------------------------
 // Evidence refs are inline text (non-URL): the registry pins them by content
 // hash, and the arbiter re-reads them without any web fetch — fully deterministic.
@@ -153,7 +165,55 @@ const disputes = [
     ],
     resolve: true,
   },
+  {
+    label: "#3 RESOLVED — becomes finalize-ripe after its 24h appeal window",
+    claim: "Water boils at 100°C at standard atmospheric pressure (1 atm).",
+    evidence:
+      "At a pressure of 101.325 kPa (1 atm), the boiling point of water is 100°C (373.15 K); the Celsius scale is defined so that water boils at 100° under standard pressure.",
+    counterClaim: "Water boils at 90°C at standard atmospheric pressure.",
+    counterEvidence:
+      "A blog post claimed water boils at 90°C 'at sea level', citing a reading actually taken at high altitude where atmospheric pressure is substantially lower than 1 atm.",
+    subQuestions: [
+      "At 1 atm, is the boiling point of water 100°C?",
+      "Does the counter-evidence measure at standard atmospheric pressure?",
+    ],
+    resolve: true,
+  },
 ];
+
+// -- finalize-ripe pass --------------------------------------------------------
+// Populating ResolutionLog reliably means reaching FINAL WITHOUT the appeal path
+// (whose emitted readjudicate races mark_appealed on StudioNet and can strand a
+// dispute at APPEALED). A plain finalize needs no appeal and no key beyond the
+// faucet-funded deployer: RESOLVED once its 24h appeal window closes, or ASSERTED
+// once its challenge window closes (finalize_uncontested). Idempotent — only
+// touches ripe disputes, skips everything already FINAL.
+async function finalizeRipe() {
+  const count = Number(await read("get_dispute_count", []));
+  const nowSec = Math.floor(Date.now() / 1000);
+  let done = 0;
+  for (let i = 0; i < count; i++) {
+    const d = await read("get_dispute", [i]);
+    const appealClosed =
+      Number(d.appeal_deadline) > 0 && nowSec >= Number(d.appeal_deadline);
+    const challengeClosed = nowSec >= Number(d.challenge_deadline);
+    try {
+      if (d.status === "RESOLVED" && (Number(d.round) >= 2 || appealClosed)) {
+        console.log(`  finalize(${i}) — RESOLVED, appeal window closed…`);
+        await write(asDeployer, ADDR.registry, "finalize", [i]);
+        done++;
+      } else if (d.status === "ASSERTED" && challengeClosed) {
+        console.log(`  finalize_uncontested(${i}) — challenge window closed…`);
+        await write(asDeployer, ADDR.registry, "finalize_uncontested", [i]);
+        done++;
+      }
+    } catch (e) {
+      const msg = String(e?.message || e).split("\n").pop().slice(0, 90);
+      console.log(`  #${i} not finalized: ${msg}`);
+    }
+  }
+  return done;
+}
 
 // -- run --------------------------------------------------------------------------
 
@@ -162,7 +222,25 @@ console.log(`challenger ${challenger.address} (fresh key, this run only)`);
 
 console.log("\n== funding accounts (studio faucet)");
 await fund(deployer.address, 50);
-await fund(challenger.address, 50);
+if (!FINALIZE_ONLY) await fund(challenger.address, 50);
+
+// Finalize any dispute whose window has closed — this is what writes ResolutionLog.
+console.log("\n== finalizing ripe disputes (RESOLVED past appeal window / ASSERTED past challenge window)");
+const finalized = await finalizeRipe();
+console.log(`  ${finalized} dispute(s) finalized`);
+
+if (FINALIZE_ONLY) {
+  console.log("\n== ResolutionLog after finalize pass");
+  console.log("  log.get_count          =", await readAt(ADDR.log, "get_count", []));
+  console.log("  vault.get_fees_accrued =", await readAt(ADDR.vault, "get_fees_accrued", []));
+  const total = Number(await read("get_dispute_count", []));
+  for (let i = 0; i < total; i++) {
+    if (await readAt(ADDR.log, "is_final", [i]))
+      console.log(`  #${i} resolution =`, JSON.stringify(await readAt(ADDR.log, "get_resolution", [i])));
+  }
+  console.log("\nDone (finalize-only).");
+  process.exit(0);
+}
 
 const before = Number(await read("get_dispute_count", []));
 console.log(`\n== seeding (registry currently has ${before} disputes)`);
@@ -201,5 +279,33 @@ for (let i = before; i < count; i++) {
   console.log(
     `  #${i} ${d.status}${d.winner !== "NONE" ? ` winner=${d.winner}` : ""} — ${d.claim_a.slice(0, 60)}…`,
   );
+}
+
+// -- prove every contract now returns content ----------------------------------
+// Scan the whole registry (not just this run) so any dispute the ripe pass just
+// finalized shows its cross-contract reads, including ResolutionLog.
+console.log("\n== read content now present across all five contracts");
+for (let i = 0; i < count; i++) {
+  const d = await read("get_dispute", [i]);
+  if (d.status !== "FINAL") continue;
+  const [isFinal, logCount, res, lock, fees] = await Promise.all([
+    readAt(ADDR.log, "is_final", [i]),
+    readAt(ADDR.log, "get_count", []),
+    readAt(ADDR.log, "get_resolution", [i]),
+    readAt(ADDR.vault, "get_lock", [i]),
+    readAt(ADDR.vault, "get_fees_accrued", []),
+  ]);
+  let appeal = "(none)";
+  try {
+    appeal = JSON.stringify(await readAt(ADDR.appeals, "get_appeal", [i]));
+  } catch {}
+  const verdict = JSON.stringify(await readAt(ADDR.arbiter, "get_verdict", [i]));
+  console.log(`\n  FINAL #${i}:`);
+  console.log(`    ResolutionLog.is_final       = ${isFinal}  (get_count=${logCount})`);
+  console.log(`    ResolutionLog.get_resolution = ${JSON.stringify(res)}`);
+  console.log(`    Diverge.get_verdict          = ${verdict}`);
+  console.log(`    StakeVault.get_lock          = ${JSON.stringify(lock)}`);
+  console.log(`    StakeVault.get_fees_accrued  = ${fees}`);
+  console.log(`    AppealManager.get_appeal     = ${appeal}`);
 }
 console.log(`\nDone. ${count - before} disputes seeded (total ${count}).`);
