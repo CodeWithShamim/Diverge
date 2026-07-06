@@ -450,7 +450,7 @@ export function HeroScene() {
     <Canvas
       ref={setCanvas}
       camera={{ fov: 42, position: [0, 0.15, 5.4] }}
-      dpr={[1, 1.75]}
+      dpr={[1, 1.5]}
       frameloop={reduced ? 'demand' : active ? 'always' : 'never'}
       gl={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}
       style={{ background: 'transparent' }}

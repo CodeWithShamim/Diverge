@@ -103,7 +103,9 @@ export function AuroraBackdrop({
       const hues: Rgb[] = isExplorer
         ? [pal.signal, pal.gold, pal.b]
         : [pal.a, pal.b, pal.signal, pal.gold];
-      const count = Math.max(16, Math.round((W * H) / 30000));
+      // Capped: on the landing this layer spans the whole page, and an
+      // area-proportional count balloons into hundreds of drawImage calls.
+      const count = Math.min(110, Math.max(16, Math.round((W * H) / 30000)));
       motes = Array.from({ length: count }, () => ({
         x: rnd() * W, y: rnd() * H,
         vx: (rnd() - 0.5) * 0.15,
@@ -114,11 +116,19 @@ export function AuroraBackdrop({
       }));
     };
 
+    // The landing backdrop spans the WHOLE page, so a dpr-sized backing store
+    // there means repainting tens of megapixels of gradients every frame —
+    // that was the home-page scroll jank. The art is soft out-of-focus glow,
+    // so render into a capped low-res buffer and let CSS stretch it; the
+    // upscale is visually indistinguishable.
+    const PIXEL_BUDGET = 1_500_000;
     const resize = () => {
       const rect = canvas.getBoundingClientRect();
       W = Math.max(1, rect.width); H = Math.max(1, rect.height);
-      canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr);
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      const scale = Math.min(dpr, Math.sqrt(PIXEL_BUDGET / (W * H)));
+      canvas.width = Math.max(1, Math.round(W * scale));
+      canvas.height = Math.max(1, Math.round(H * scale));
+      ctx.setTransform(scale, 0, 0, scale, 0, 0);
       seedMotes();
     };
     resize();
@@ -180,7 +190,16 @@ export function AuroraBackdrop({
     };
 
     let raf = 0;
+    let last = 0;
     const draw = (t: number) => {
+      // Schedule first, then throttle: ~30fps is plenty for ambient drift and
+      // halves the raster work. Motion below is scaled by `step` so the drift
+      // speed is unchanged.
+      if (!reduced && onScreen && !document.hidden) raf = requestAnimationFrame(draw);
+      else raf = 0;
+      if (!reduced && t - last < 30) return;
+      const step = reduced ? 0 : Math.min(3, (t - last) / 16.7);
+      last = t;
       const time = reduced ? 9000 : t;
 
       ctx.globalCompositeOperation = 'source-over';
@@ -198,7 +217,9 @@ export function AuroraBackdrop({
         g.addColorStop(0, rgba(bl.c(), pal.dark ? 0.28 : 0.16));
         g.addColorStop(1, rgba(bl.c(), 0));
         ctx.fillStyle = g;
-        ctx.fillRect(0, 0, W, H);
+        // The gradient is transparent past r — fill only its bounding box
+        // instead of the whole (page-sized) canvas.
+        ctx.fillRect(cx - r, cy - r, r * 2, r * 2);
       }
 
       // 'assert' + 'both' draw the diverging streams; 'explorer' + 'both' the scan.
@@ -214,12 +235,12 @@ export function AuroraBackdrop({
       for (const m of motes) {
         if (!reduced) {
           if (!isExplorer) {
-            m.x += m.vx; m.y += m.vy;
+            m.x += m.vx * step; m.y += m.vy * step;
             if (m.y < -6) { m.y = H + 6; m.x = rnd() * W; }
           } else {
             // drift toward the resolved core, then respawn at the edge
-            m.x += (f.x - m.x) * 0.0025 + m.vx;
-            m.y += (f.y - m.y) * 0.0025 + m.vy;
+            m.x += ((f.x - m.x) * 0.0025 + m.vx) * step;
+            m.y += ((f.y - m.y) * 0.0025 + m.vy) * step;
             if (Math.hypot(m.x - f.x, m.y - f.y) < 12) {
               m.x = rnd() * W; m.y = rnd() * H;
             }
@@ -248,8 +269,6 @@ export function AuroraBackdrop({
       ctx.fill();
 
       ctx.globalCompositeOperation = 'source-over';
-      if (!reduced && onScreen && !document.hidden) raf = requestAnimationFrame(draw);
-      else raf = 0;
     };
 
     // Stop the loop when the backdrop is scrolled out of view or the tab is
